@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Dipendenze
+node_modules/
+mobile/node_modules/
+server/node_modules/
+
+# Build / cache
+mobile/.expo/
+mobile/dist/
+server/dist/
+*.tsbuildinfo
+
+# Log
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db

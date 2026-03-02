@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Gestione Magazzino",
+    "slug": "gestione-magazzino",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2563EB"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tuaazienda.gestionemagazzino",
+      "infoPlist": {
+        "NSCameraUsageDescription": "La fotocamera è necessaria per scansionare i codici a barre dei prodotti",
+        "NSMicrophoneUsageDescription": "Il microfono è necessario per l'inserimento vocale dei dati prodotto",
+        "NSSpeechRecognitionUsageDescription": "Il riconoscimento vocale è necessario per dettare il nome e i dettagli del prodotto",
+        "NSLocalNetworkUsageDescription": "L'app scansiona la rete locale per trovare automaticamente il server del magazzino"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2563EB"
+      },
+      "package": "com.tuaazienda.gestionemagazzino",
+      "permissions": ["CAMERA", "RECORD_AUDIO"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "La fotocamera è necessaria per scansionare i codici a barre"
+        }
+      ]
+    ]
+  }
+}
