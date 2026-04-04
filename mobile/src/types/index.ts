@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: 'admin' | 'operator';
+  mustChangePassword: boolean;
   loginToken?: string;
   createdAt: string;
 }
@@ -96,14 +97,16 @@ export interface ApiResponse<T> {
 export interface AuthResponse {
   token: string;
   user: User;
+  mustChangePassword?: boolean;
 }
 
 // ─── Navigazione ──────────────────────────────────────────────────────────────
 
 export type RootStackParamList = {
   Login: undefined;
-  Register: undefined;
+  ChangePassword: undefined;
   MainTabs: undefined;
+  AdminPanel: undefined;
   WarehouseMap: { warehouseId: string; warehouseName: string };
   ShelfDetail: { shelfId: string; warehouseId: string; levelFocus?: number };
   ProductDetail: { productId: string };

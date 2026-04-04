@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
+import { isProd } from '../config/env';
+import { logger } from '../config/logger';
 
 export interface AppError extends Error {
   statusCode?: number;
@@ -13,9 +15,9 @@ export const errorHandler = (
   const status = err.statusCode || 500;
   const message = err.message || 'Errore interno del server';
 
-  if (process.env.NODE_ENV === 'development') {
-    console.error('[ERROR]', err);
-  }
+  logger.error({ err, statusCode: status }, err.message);
 
-  res.status(status).json({ message });
+  res.status(status).json({
+    message: isProd && status === 500 ? 'Errore interno del server' : message,
+  });
 };

@@ -5,14 +5,8 @@ import {
   Modal,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import type { SpeechResultsEvent } from '@react-native-voice/voice';
-// Import lazy: @react-native-voice/voice richiede expo-dev-client, non funziona su Expo Go
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let Voice: typeof import('@react-native-voice/voice').default | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  Voice = require('@react-native-voice/voice').default;
-} catch { /* modulo nativo non disponibile (Expo Go) */ }
+import { Audio } from 'expo-av';
+import api from '../../services/api';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, Warehouse, Shelf } from '../../types';
 import { productService } from '../../services/productService';
@@ -65,9 +59,11 @@ export default function ProductFormScreen({ route, navigation }: Props) {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const scanHandledRef = useRef(false);
 
-  // Input vocale
+  // Input vocale (Whisper)
+  const [voiceState, setVoiceState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
   const [listeningField, setListeningField] = useState<string | null>(null);
   const listeningFieldRef = useRef<string | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
 
   // Campi prodotto
   const [barcode, setBarcode] = useState(scannedBarcode ?? '');
@@ -116,53 +112,69 @@ export default function ProductFormScreen({ route, navigation }: Props) {
     }
   }, [isEdit, productId]);
 
-  // ── Riconoscimento vocale ─────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!Voice) return;
-    Voice.onSpeechResults = (e: SpeechResultsEvent) => {
-      const text = e.value?.[0]?.trim() ?? '';
-      if (text) {
-        const field = listeningFieldRef.current;
-        if (field === 'name') setName(text);
-        else if (field === 'color') setColor(text);
-        else if (field === 'description') setDescription(prev => prev ? `${prev} ${text}` : text);
-        else if (field === 'slot') setSlot(text);
-      }
-      doStopVoice();
-    };
-    Voice.onSpeechError = () => doStopVoice();
-    return () => { Voice?.destroy().then(() => Voice?.removeAllListeners()); };
-  }, []);
-
-  const doStopVoice = async () => {
-    try { await Voice?.stop(); } catch {}
-    listeningFieldRef.current = null;
-    setListeningField(null);
+  // ── Riconoscimento vocale (Whisper open-weight via server) ───────────────────
+  const applyTranscription = (text: string) => {
+    const field = listeningFieldRef.current;
+    if (field === 'name') setName(text);
+    else if (field === 'color') setColor(text);
+    else if (field === 'description') setDescription(prev => prev ? `${prev} ${text}` : text);
+    else if (field === 'slot') setSlot(text);
   };
 
   const startVoice = async (fieldName: string) => {
-    if (!Voice) {
-      Alert.alert(
-        'Voce non disponibile',
-        'Il riconoscimento vocale richiede un build nativo dell\'app (expo-dev-client), non funziona con Expo Go.'
-      );
+    // Se sta già registrando → ferma e trascrive
+    if (voiceState === 'recording') {
+      await stopAndTranscribe();
       return;
     }
-    if (listeningFieldRef.current) {
-      await doStopVoice();
-      return;
-    }
+    if (voiceState === 'transcribing') return;
+
     try {
+      const { granted } = await Audio.requestPermissionsAsync();
+      if (!granted) {
+        Alert.alert('Permesso microfono', 'Concedi accesso al microfono nelle impostazioni.');
+        return;
+      }
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      recordingRef.current = recording;
       listeningFieldRef.current = fieldName;
       setListeningField(fieldName);
-      await Voice.start('it-IT');
+      setVoiceState('recording');
     } catch {
+      Alert.alert('Errore', 'Impossibile avviare la registrazione.');
+    }
+  };
+
+  const stopAndTranscribe = async () => {
+    const rec = recordingRef.current;
+    if (!rec) return;
+    setVoiceState('transcribing');
+    try {
+      await rec.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      recordingRef.current = null;
+      const uri = rec.getURI();
+      if (!uri) throw new Error('URI non disponibile');
+
+      const ext = uri.split('.').pop() ?? 'm4a';
+      const formData = new FormData();
+      formData.append('audio', { uri, type: `audio/${ext}`, name: `rec.${ext}` } as unknown as Blob);
+
+      const { data } = await api.post<{ text: string }>('/transcribe', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60_000,
+      });
+      const text = data.text?.trim() ?? '';
+      if (text) applyTranscription(text);
+    } catch {
+      Alert.alert('Errore trascrizione', 'Impossibile trascrivere l\'audio. Verifica che il server sia raggiungibile.');
+    } finally {
       listeningFieldRef.current = null;
       setListeningField(null);
-      Alert.alert(
-        'Voce non disponibile',
-        'Il riconoscimento vocale richiede un build nativo dell\'app (expo-dev-client).'
-      );
+      setVoiceState('idle');
     }
   };
 
@@ -422,11 +434,11 @@ export default function ProductFormScreen({ route, navigation }: Props) {
         )}
 
         <Field label="Nome prodotto *" value={name} onChange={setName} placeholder="Nome del prodotto"
-          voiceField="name" listeningField={listeningField} onVoice={startVoice} />
+          voiceField="name" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
         <Field label="Colore / Finitura" value={color} onChange={setColor} placeholder="Es. Nero, Silver, Champagne"
-          voiceField="color" listeningField={listeningField} onVoice={startVoice} />
+          voiceField="color" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
         <Field label="Descrizione" value={description} onChange={setDescription} placeholder="Opzionale" multiline
-          voiceField="description" listeningField={listeningField} onVoice={startVoice} />
+          voiceField="description" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
         <Field label="Quantità" value={quantity} onChange={setQuantity} placeholder="1" keyboardType="numeric" />
 
         {/* ── Selezione magazzino ──────────────────────────────────────── */}
@@ -497,7 +509,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
         )}
 
         <Field label="Slot / Posizione sul ripiano" value={slot} onChange={setSlot} placeholder="Es. L1, C2 (opzionale)"
-          voiceField="slot" listeningField={listeningField} onVoice={startVoice} />
+          voiceField="slot" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
 
         <TouchableOpacity
           style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
@@ -515,7 +527,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
 
 function Field({
   label, value, onChange, placeholder, multiline, keyboardType,
-  voiceField, listeningField, onVoice,
+  voiceField, listeningField, voiceState, onVoice,
 }: {
   label: string;
   value: string;
@@ -525,9 +537,15 @@ function Field({
   keyboardType?: 'default' | 'numeric' | 'email-address';
   voiceField?: string;
   listeningField?: string | null;
+  voiceState?: 'idle' | 'recording' | 'transcribing';
   onVoice?: (field: string) => void;
 }) {
-  const isListening = !!voiceField && listeningField === voiceField;
+  const isThisField = !!voiceField && listeningField === voiceField;
+  const isRecording = isThisField && voiceState === 'recording';
+  const isTranscribing = isThisField && voiceState === 'transcribing';
+  const isActive = isRecording || isTranscribing;
+  const isDisabled = !isThisField && voiceState !== 'idle';
+
   return (
     <>
       <Text style={styles.label}>{label}</Text>
@@ -542,10 +560,18 @@ function Field({
         />
         {voiceField && onVoice && (
           <TouchableOpacity
-            style={[styles.micBtn, isListening && styles.micBtnActive]}
+            style={[styles.micBtn, isActive && styles.micBtnActive]}
             onPress={() => onVoice(voiceField)}
+            disabled={isDisabled || isTranscribing}
           >
-            <Ionicons name={isListening ? 'stop-circle-outline' : 'mic-outline'} size={20} color={isListening ? '#DC2626' : '#374151'} />
+            {isTranscribing
+              ? <ActivityIndicator size="small" color="#DC2626" />
+              : <Ionicons
+                  name={isRecording ? 'stop-circle-outline' : 'mic-outline'}
+                  size={20}
+                  color={isActive ? '#DC2626' : isDisabled ? '#D1D5DB' : '#374151'}
+                />
+            }
           </TouchableOpacity>
         )}
       </View>

@@ -9,10 +9,8 @@ export const authService = {
     return data;
   },
 
-  async register(name: string, email: string, password: string): Promise<AuthResponse> {
-    const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password });
-    await AsyncStorage.setItem('auth_token', data.token);
-    return data;
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await api.post('/auth/change-password', { currentPassword, newPassword });
   },
 
   async getMe(): Promise<User> {

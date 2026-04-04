@@ -4,12 +4,17 @@ import { validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+import { env } from '../config/env';
 
 const signToken = (id: string): string =>
-  jwt.sign({ id }, process.env.JWT_SECRET as string, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  jwt.sign({ id }, env.JWT_SECRET, {
+    expiresIn: env.JWT_EXPIRES_IN,
   } as jwt.SignOptions);
 
+/**
+ * Registrazione utente — solo admin può creare nuovi utenti.
+ * Il middleware protect + requireAdmin sono applicati nella route.
+ */
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -26,10 +31,15 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       return;
     }
 
-    const user = await User.create({ name, email, password, role });
-    const token = signToken(user.id as string);
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: role || 'operator',
+      mustChangePassword: true,
+    });
 
-    res.status(201).json({ token, user });
+    res.status(201).json({ user });
   } catch (err) {
     next(err);
   }
@@ -52,7 +62,42 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     }
 
     const token = signToken(user.id as string);
-    res.json({ token, user });
+    res.json({
+      token,
+      user,
+      mustChangePassword: user.mustChangePassword,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user!._id).select('+password');
+
+    if (!user) {
+      res.status(404).json({ message: 'Utente non trovato' });
+      return;
+    }
+
+    if (!await user.comparePassword(currentPassword)) {
+      res.status(400).json({ message: 'Password attuale non corretta' });
+      return;
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    await user.save();
+
+    res.json({ message: 'Password aggiornata con successo' });
   } catch (err) {
     next(err);
   }
@@ -79,7 +124,11 @@ export const qrLogin = async (req: Request, res: Response, next: NextFunction): 
       return;
     }
     const jwtToken = signToken(user.id as string);
-    res.json({ token: jwtToken, user });
+    res.json({
+      token: jwtToken,
+      user,
+      mustChangePassword: user.mustChangePassword,
+    });
   } catch (err) {
     next(err);
   }

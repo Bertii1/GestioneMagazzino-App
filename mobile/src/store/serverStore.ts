@@ -1,9 +1,13 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { discoverServer, verifyServerUrl } from '../services/serverDiscovery';
 import { setServerUrl } from '../services/api';
 
 const STORAGE_KEY = 'server_url';
+
+/** URL fisso configurato in app.json extra.apiUrl (per produzione cloud) */
+const FIXED_API_URL = (Constants.expoConfig?.extra?.apiUrl as string) || '';
 
 interface ServerState {
   /** URL base del server, es. "http://192.168.0.240:3000" */
@@ -29,6 +33,19 @@ export const useServerStore = create<ServerState>((set, get) => ({
   discover: async () => {
     set({ isDiscovering: true, progress: 0 });
 
+    // 0. URL fisso da config (produzione cloud) — salta discovery
+    if (FIXED_API_URL) {
+      const ok = await verifyServerUrl(FIXED_API_URL);
+      if (ok) {
+        setServerUrl(FIXED_API_URL);
+        set({ serverUrl: FIXED_API_URL, isDiscovering: false });
+        return;
+      }
+      // Se il server cloud non risponde, mostra input manuale
+      set({ isDiscovering: false });
+      return;
+    }
+
     // 1. Verifica URL precedentemente salvato (rapido, 2s timeout)
     const stored = await AsyncStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -38,11 +55,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
         set({ serverUrl: stored, isDiscovering: false });
         return;
       }
-      // URL salvato non raggiungibile → rimuovi e riscan
       await AsyncStorage.removeItem(STORAGE_KEY);
     }
 
-    // 2. Scansione subnet
+    // 2. Scansione subnet (solo in LAN / dev)
     const found = await discoverServer((pct) => set({ progress: pct }));
     if (found) {
       await AsyncStorage.setItem(STORAGE_KEY, found);

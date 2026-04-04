@@ -14,8 +14,10 @@ import { RootStackParamList } from '../types';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 
 import LoginScreen from '../screens/auth/LoginScreen';
-import RegisterScreen from '../screens/auth/RegisterScreen';
+import ChangePasswordScreen from '../screens/auth/ChangePasswordScreen';
 import MyQRCodeScreen from '../screens/auth/MyQRCodeScreen';
+
+import AdminPanelScreen from '../screens/admin/AdminPanelScreen';
 
 import WarehouseListScreen from '../screens/warehouse/WarehouseListScreen';
 import WarehouseMapScreen from '../screens/warehouse/WarehouseMapScreen';
@@ -29,24 +31,36 @@ import ProductDetailScreen from '../screens/product/ProductDetailScreen';
 import ProductFormScreen from '../screens/product/ProductFormScreen';
 import ScanBarcodeScreen from '../screens/product/ScanBarcodeScreen';
 
-type TabParamList = { Magazzini: undefined; Prodotti: undefined };
+type TabParamList = { Magazzini: undefined; Prodotti: undefined; Admin: undefined };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
-function QRButton() {
+function HeaderButtons() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
+  const logout = useAuthStore((s) => s.logout);
   return (
-    <TouchableOpacity
-      onPress={() => nav.navigate('MyQRCode')}
-      style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
-    >
-      <Ionicons name="qr-code-outline" size={22} color="#374151" />
-    </TouchableOpacity>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      <TouchableOpacity
+        onPress={() => nav.navigate('MyQRCode')}
+        style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Ionicons name="qr-code-outline" size={22} color="#374151" />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={logout}
+        style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Ionicons name="log-out-outline" size={22} color="#DC2626" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 function MainTabs() {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -58,13 +72,29 @@ function MainTabs() {
       <Tab.Screen
         name="Magazzini"
         component={WarehouseListScreen as React.ComponentType}
-        options={{ tabBarLabel: 'Magazzini' }}
+        options={{
+          tabBarLabel: 'Magazzini',
+          tabBarIcon: ({ color, size }) => <Ionicons name="cube-outline" size={size} color={color} />,
+        }}
       />
       <Tab.Screen
         name="Prodotti"
         component={ProductListScreen as React.ComponentType}
-        options={{ tabBarLabel: 'Prodotti' }}
+        options={{
+          tabBarLabel: 'Prodotti',
+          tabBarIcon: ({ color, size }) => <Ionicons name="pricetags-outline" size={size} color={color} />,
+        }}
       />
+      {isAdmin && (
+        <Tab.Screen
+          name="Admin"
+          component={AdminPanelScreen as React.ComponentType}
+          options={{
+            tabBarLabel: 'Admin',
+            tabBarIcon: ({ color, size }) => <Ionicons name="shield-outline" size={size} color={color} />,
+          }}
+        />
+      )}
     </Tab.Navigator>
   );
 }
@@ -178,7 +208,7 @@ const ss = StyleSheet.create({
 
 export default function AppNavigator() {
   const { serverUrl, isDiscovering, progress, discover, setManualUrl } = useServerStore();
-  const { isAuthenticated, isLoading, restoreSession, pendingQrToken } = useAuthStore();
+  const { isAuthenticated, isLoading, restoreSession, mustChangePassword } = useAuthStore();
   const [retrying, setRetrying] = useState(false);
 
   // Fase 1: trova il server all'avvio
@@ -236,26 +266,22 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: true }}>
         {!isAuthenticated ? (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Registrazione' }} />
-          </>
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        ) : mustChangePassword ? (
+          <Stack.Screen
+            name="ChangePassword"
+            component={ChangePasswordScreen}
+            options={{ title: 'Cambia Password', headerBackVisible: false }}
+          />
         ) : (
           <>
-            {pendingQrToken && (
-              <Stack.Screen
-                name="MyQRCode"
-                component={MyQRCodeScreen}
-                options={{ title: 'Il tuo QR code', headerBackVisible: false }}
-              />
-            )}
             <Stack.Screen
               name="MainTabs"
               component={MainTabs}
               options={{
                 headerShown: true,
                 title: 'Gestione Magazzino',
-                headerRight: () => <QRButton />,
+                headerRight: () => <HeaderButtons />,
               }}
             />
             <Stack.Screen
@@ -298,9 +324,7 @@ export default function AppNavigator() {
               component={BatchQRPrintScreen}
               options={({ route }) => ({ title: `Stampa QR · ${route.params.warehouseName}` })}
             />
-            {!pendingQrToken && (
-              <Stack.Screen name="MyQRCode" component={MyQRCodeScreen} options={{ title: 'Il tuo QR code' }} />
-            )}
+            <Stack.Screen name="MyQRCode" component={MyQRCodeScreen} options={{ title: 'Il tuo QR code' }} />
           </>
         )}
       </Stack.Navigator>

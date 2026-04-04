@@ -108,9 +108,9 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.qrButtonText}>Accedi con QR code</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.link}>Non hai un account? Registrati</Text>
-          </TouchableOpacity>
+          <Text style={styles.hint}>
+            Contatta l'amministratore per ottenere le credenziali.
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     gap: 8, marginBottom: 20,
   },
   qrButtonText: { color: '#2563EB', fontSize: 15, fontWeight: '600' },
-  link: { color: '#2563EB', textAlign: 'center', fontSize: 14 },
+  hint: { color: '#9CA3AF', textAlign: 'center', fontSize: 13, marginTop: 8 },
 
   // Scanner
   scannerContainer: { flex: 1, backgroundColor: '#000' },

@@ -27,10 +27,21 @@
         "backgroundColor": "#2563EB"
       },
       "package": "com.tuaazienda.gestionemagazzino",
-      "permissions": ["CAMERA", "RECORD_AUDIO"]
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiUrl": "https://15.160.56.217.nip.io",
+      "eas": {
+        "projectId": "bb05cc14-9a34-4f9c-8671-55689ab0987c"
+      }
     },
     "plugins": [
       [
@@ -39,6 +50,7 @@
           "cameraPermission": "La fotocamera è necessaria per scansionare i codici a barre"
         }
       ]
-    ]
+    ],
+    "owner": "3n3rgy07"
   }
 }

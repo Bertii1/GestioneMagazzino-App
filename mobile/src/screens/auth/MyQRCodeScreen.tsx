@@ -55,8 +55,12 @@ export default function MyQRCodeScreen({ navigation }: Props) {
   };
 
   const handleDismiss = () => {
-    if (isFirstAccess) clearPendingQr();
-    navigation.goBack();
+    if (isFirstAccess) {
+      clearPendingQr();
+      navigation.replace('MainTabs');
+    } else {
+      navigation.goBack();
+    }
   };
 
   const qrValue = loginToken ? `${QR_PREFIX}${loginToken}` : '';

@@ -1,12 +1,15 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, qrLogin, getQrToken, regenerateQrToken } from '../controllers/authController';
-import { protect } from '../middleware/auth';
+import { register, login, getMe, qrLogin, getQrToken, regenerateQrToken, changePassword } from '../controllers/authController';
+import { protect, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
+// Registrazione — solo admin può creare nuovi utenti
 router.post(
   '/register',
+  protect,
+  requireAdmin,
   [
     body('name').trim().notEmpty().withMessage('Nome obbligatorio'),
     body('email').isEmail().withMessage('Email non valida'),
@@ -22,6 +25,16 @@ router.post(
     body('password').notEmpty().withMessage('Password obbligatoria'),
   ],
   login
+);
+
+router.post(
+  '/change-password',
+  protect,
+  [
+    body('currentPassword').notEmpty().withMessage('Password attuale obbligatoria'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Nuova password minimo 6 caratteri'),
+  ],
+  changePassword
 );
 
 router.get('/me', protect, getMe);
