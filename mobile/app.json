@@ -18,7 +18,8 @@
         "NSCameraUsageDescription": "La fotocamera è necessaria per scansionare i codici a barre dei prodotti",
         "NSMicrophoneUsageDescription": "Il microfono è necessario per l'inserimento vocale dei dati prodotto",
         "NSSpeechRecognitionUsageDescription": "Il riconoscimento vocale è necessario per dettare il nome e i dettagli del prodotto",
-        "NSLocalNetworkUsageDescription": "L'app scansiona la rete locale per trovare automaticamente il server del magazzino"
+        "NSLocalNetworkUsageDescription": "L'app scansiona la rete locale per trovare automaticamente il server del magazzino",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -38,7 +39,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiUrl": "https://15.160.56.217.nip.io",
+      "apiUrl": "https://YOUR_SERVER_URL",
       "eas": {
         "projectId": "bb05cc14-9a34-4f9c-8671-55689ab0987c"
       }

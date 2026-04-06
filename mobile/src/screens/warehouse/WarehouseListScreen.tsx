@@ -82,6 +82,28 @@ export default function WarehouseListScreen({ navigation }: Props) {
     }
   };
 
+  const handleDeleteWarehouse = (wh: Warehouse) => {
+    Alert.alert(
+      'Elimina magazzino',
+      `Eliminare "${wh.name}" e tutti i suoi scaffali/prodotti?`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Elimina',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await warehouseService.delete(wh._id);
+              setWarehouses(prev => prev.filter(w => w._id !== wh._id));
+            } catch {
+              Alert.alert('Errore', 'Impossibile eliminare il magazzino');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = ({ item }: { item: Warehouse }) => (
     <TouchableOpacity
       style={styles.card}
@@ -91,12 +113,22 @@ export default function WarehouseListScreen({ navigation }: Props) {
           { warehouseId: item._id, warehouseName: item.name }
         )
       }
+      onLongPress={() => handleDeleteWarehouse(item)}
     >
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{item.name}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardTitle}>{item.name}</Text>
+        </View>
         <Text style={styles.cardMeta}>
           {item.gridWidth} × {item.gridHeight}
         </Text>
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={() => handleDeleteWarehouse(item)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+        </TouchableOpacity>
       </View>
       {item.description ? (
         <Text style={styles.cardDescription}>{item.description}</Text>
@@ -216,6 +248,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
   },
   cardDescription: { marginTop: 8, fontSize: 14, color: '#6B7280' },
+  deleteBtn: {
+    padding: 8, borderRadius: 6, backgroundColor: '#FEF2F2', marginLeft: 10,
+  },
   empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 60, fontSize: 16, lineHeight: 26 },
   fab: {
     position: 'absolute', bottom: 24, right: 20,

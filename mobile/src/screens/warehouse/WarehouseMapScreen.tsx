@@ -146,6 +146,33 @@ export default function WarehouseMapScreen({ route, navigation }: Props) {
             </Text>
           </View>
           <TouchableOpacity
+            style={styles.panelBtnDelete}
+            onPress={() => {
+              Alert.alert(
+                'Elimina scaffale',
+                `Eliminare lo scaffale "${selectedShelf.code}" e tutti i suoi prodotti?`,
+                [
+                  { text: 'Annulla', style: 'cancel' },
+                  {
+                    text: 'Elimina',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await shelfService.delete(selectedShelf._id);
+                        setSelectedShelf(null);
+                        await load();
+                      } catch {
+                        Alert.alert('Errore', 'Impossibile eliminare lo scaffale');
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Ionicons name="trash-outline" size={16} color="#EF4444" />
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.panelBtn}
             onPress={() =>
               navigation.navigate('ShelfDetail', {
@@ -269,6 +296,9 @@ const styles = StyleSheet.create({
   panelTitleEmpty: { fontSize: 17, fontWeight: '700', color: '#92400E' },
   panelSubtitle: { fontSize: 13, color: '#374151', marginTop: 2 },
   panelMeta: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  panelBtnDelete: {
+    padding: 10, borderRadius: 8, backgroundColor: '#FEF2F2', marginRight: 8,
+  },
   panelBtn: {
     backgroundColor: '#2563EB', borderRadius: 8,
     paddingHorizontal: 16, paddingVertical: 10,

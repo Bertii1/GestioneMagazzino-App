@@ -108,21 +108,26 @@ function ServerSetupScreen({
   onRetry: () => void;
   isRetrying: boolean;
 }) {
-  const [ip, setIp] = useState('');
-  const [port, setPort] = useState('3000');
+  const [useHttps, setUseHttps] = useState(true);
+  const [host, setHost] = useState('');
+  const [port, setPort] = useState('');
   const [connecting, setConnecting] = useState(false);
 
   const handleConnect = async () => {
-    const host = ip.trim();
-    if (!host) { Alert.alert('Inserisci l\'indirizzo IP del server'); return; }
+    const h = host.trim();
+    if (!h) { Alert.alert('Inserisci l\'indirizzo del server'); return; }
     setConnecting(true);
-    const url = `http://${host}:${port.trim() || '3000'}`;
+    const scheme = useHttps ? 'https' : 'http';
+    const p = port.trim();
+    const defaultPort = useHttps ? '443' : '3000';
+    const portSuffix = p && p !== defaultPort ? `:${p}` : (useHttps ? '' : ':3000');
+    const url = `${scheme}://${h}${portSuffix}`;
     const ok = await onConnect(url);
     setConnecting(false);
     if (!ok) {
       Alert.alert(
         'Server non raggiungibile',
-        `Impossibile connettersi a ${url}.\nVerifica che il server sia avviato e che il dispositivo sia sulla stessa rete WiFi.`
+        `Impossibile connettersi a ${url}.\nVerifica che il server sia avviato e raggiungibile.`
       );
     }
   };
@@ -134,28 +139,47 @@ function ServerSetupScreen({
         <Text style={ss.title}>Server non trovato</Text>
         <Text style={ss.subtitle}>
           Il server non è stato rilevato automaticamente.{'\n'}
-          Inserisci l'indirizzo IP manualmente.
+          Inserisci l'indirizzo manualmente.
         </Text>
 
-        <Text style={ss.label}>Indirizzo IP del server</Text>
+        <View style={{ flexDirection: 'row', marginBottom: 12, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#D1D5DB' }}>
+          <TouchableOpacity
+            style={{ flex: 1, paddingVertical: 10, backgroundColor: useHttps ? '#2563EB' : '#F3F4F6', alignItems: 'center' }}
+            onPress={() => { setUseHttps(true); setPort(''); }}
+          >
+            <Text style={{ fontWeight: '600', color: useHttps ? '#fff' : '#6B7280' }}>HTTPS (Cloud)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1, paddingVertical: 10, backgroundColor: !useHttps ? '#2563EB' : '#F3F4F6', alignItems: 'center' }}
+            onPress={() => { setUseHttps(false); setPort('3000'); }}
+          >
+            <Text style={{ fontWeight: '600', color: !useHttps ? '#fff' : '#6B7280' }}>HTTP (LAN)</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={ss.label}>{useHttps ? 'Dominio o IP del server' : 'Indirizzo IP del server'}</Text>
         <TextInput
           style={ss.input}
-          value={ip}
-          onChangeText={v => setIp(v.replace(/,/g, '.'))}
-          placeholder="Es. 192.168.0.240"
+          value={host}
+          onChangeText={v => setHost(v.replace(/,/g, '.'))}
+          placeholder={useHttps ? 'Es. YOUR_SERVER_URL' : 'Es. 192.168.0.240'}
           keyboardType="url"
           autoCapitalize="none"
           autoCorrect={false}
         />
 
-        <Text style={ss.label}>Porta</Text>
-        <TextInput
-          style={ss.input}
-          value={port}
-          onChangeText={setPort}
-          placeholder="3000"
-          keyboardType="number-pad"
-        />
+        {!useHttps && (
+          <>
+            <Text style={ss.label}>Porta</Text>
+            <TextInput
+              style={ss.input}
+              value={port}
+              onChangeText={setPort}
+              placeholder="3000"
+              keyboardType="number-pad"
+            />
+          </>
+        )}
 
         <TouchableOpacity
           style={[ss.btn, ss.btnPrimary, connecting && ss.btnDisabled]}

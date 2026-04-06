@@ -12,6 +12,7 @@ import warehouseRoutes from './routes/warehouses';
 import shelfRoutes from './routes/shelves';
 import productRoutes from './routes/products';
 import transcribeRoutes from './routes/transcribe';
+import visionRoutes from './routes/vision';
 import userRoutes from './routes/users';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -47,7 +48,7 @@ const authLimiter = rateLimit({
   message: { message: 'Troppi tentativi di accesso, riprova tra 15 minuti.' },
 });
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
@@ -55,6 +56,7 @@ app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/shelves', shelfRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/transcribe', transcribeRoutes);
+app.use('/api/vision', visionRoutes);
 app.use('/api/users', userRoutes);
 
 // Health check

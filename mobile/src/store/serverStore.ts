@@ -75,9 +75,10 @@ export const useServerStore = create<ServerState>((set, get) => ({
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = `http://${url}`;
     }
-    // Se non c'è la porta, aggiungi :3000
+    // Se non c'è la porta, aggiungi :3000 solo per HTTP (HTTPS usa 443 di default)
+    const isHttps = url.startsWith('https://');
     const hasPort = /:\d+$/.test(url.replace(/^https?:\/\//, '').split('/')[0]);
-    if (!hasPort) url = `${url}:3000`;
+    if (!hasPort && !isHttps) url = `${url}:3000`;
 
     const ok = await verifyServerUrl(url);
     if (ok) {

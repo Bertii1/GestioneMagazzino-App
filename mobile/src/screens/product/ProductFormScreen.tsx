@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
-  Modal,
+  Modal, Image,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import api from '../../services/api';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -58,6 +59,10 @@ export default function ProductFormScreen({ route, navigation }: Props) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const scanHandledRef = useRef(false);
+
+  // Riconoscimento AI da foto
+  const [aiIdentifying, setAiIdentifying] = useState(false);
+  const [aiPreviewUri, setAiPreviewUri] = useState<string | null>(null);
 
   // Input vocale (Whisper)
   const [voiceState, setVoiceState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
@@ -184,10 +189,13 @@ export default function ProductFormScreen({ route, navigation }: Props) {
     setLooking(true);
     setLookupResult(null);
     try {
-      // UPC Item DB — ottima copertura su elettronica audio/video
       const res = await fetch(
         `https://api.upcitemdb.com/prod/trial/lookup?upc=${code.trim()}`
       );
+      if (res.status === 429) {
+        Alert.alert('Limite raggiunto', 'Troppe ricerche oggi (max 100/giorno).\nCompila manualmente.');
+        return;
+      }
       if (res.ok) {
         const json = await res.json();
         const item = json?.items?.[0];
@@ -205,28 +213,9 @@ export default function ProductFormScreen({ route, navigation }: Props) {
           return;
         }
       }
-      // Fallback: Open EAN (barcode europei)
-      const res2 = await fetch(
-        `https://opengtindb.org/?ean=${code.trim()}&cmd=ean&lang=it&tf=json`
-      );
-      if (res2.ok) {
-        const json2 = await res2.json();
-        const p = json2?.product?.[0];
-        if (p?.name) {
-          const result: LookupResult = {
-            name: p.name,
-            brand: p.vendor || undefined,
-            description: p.detailname || undefined,
-            category: p.maincategory || undefined,
-          };
-          setLookupResult(result);
-          setLookupEditName(buildCleanName(result));
-          return;
-        }
-      }
-      Alert.alert('Non trovato', 'Prodotto non presente nei database online.\nCompila manualmente i campi.');
+      Alert.alert('Non trovato', 'Prodotto non presente nel database.\nCompila manualmente i campi.');
     } catch {
-      Alert.alert('Errore rete', 'Impossibile raggiungere il database prodotti.');
+      Alert.alert('Errore rete', 'Impossibile connettersi al database prodotti.\nVerifica la connessione internet.');
     } finally {
       setLooking(false);
     }
@@ -272,6 +261,67 @@ export default function ProductFormScreen({ route, navigation }: Props) {
     ].filter(Boolean);
     if (parts.length) setDescription(parts.join('\n'));
     setLookupResult(null);
+  };
+
+  // ── Riconoscimento AI da foto ────────────────────────────────────────────────
+  const identifyFromPhoto = async (source: 'camera' | 'gallery') => {
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 0.7,
+          base64: true,
+        })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.7,
+          base64: true,
+        });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    setAiPreviewUri(asset.uri);
+    setAiIdentifying(true);
+
+    try {
+      const formData = new FormData();
+      const ext = asset.uri.split('.').pop() ?? 'jpg';
+      formData.append('image', {
+        uri: asset.uri,
+        type: asset.mimeType || `image/${ext}`,
+        name: `photo.${ext}`,
+      } as unknown as Blob);
+
+      const { data } = await api.post('/vision/identify', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30_000,
+      });
+
+      // Auto-compila i campi con i dati riconosciuti
+      if (data.name) setName(data.name);
+      if (data.brand) {
+        const desc = [data.brand, data.model && `Modello: ${data.model}`, data.category].filter(Boolean).join(' · ');
+        setDescription(desc);
+      }
+      if (data.color) setColor(data.color);
+      if (data.barcode && !barcode) setBarcode(data.barcode);
+
+      Alert.alert('Prodotto riconosciuto', `${data.name}${data.brand ? ` (${data.brand})` : ''}`, [{ text: 'OK' }]);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message || 'Impossibile riconoscere il prodotto dalla foto';
+      Alert.alert('Errore', msg);
+    } finally {
+      setAiIdentifying(false);
+    }
+  };
+
+  const showPhotoOptions = () => {
+    Alert.alert('Riconoscimento AI', 'Scatta una foto o scegli dalla galleria', [
+      { text: 'Fotocamera', onPress: () => identifyFromPhoto('camera') },
+      { text: 'Galleria', onPress: () => identifyFromPhoto('gallery') },
+      { text: 'Annulla', style: 'cancel' },
+    ]);
   };
 
   // ── Salvataggio ──────────────────────────────────────────────────────────────
@@ -431,6 +481,28 @@ export default function ProductFormScreen({ route, navigation }: Props) {
           <Text style={styles.hint}>
             Senza barcode verrà generato automaticamente un codice interno.
           </Text>
+        )}
+
+        {/* ── Riconoscimento AI da foto ───────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.aiBtn, aiIdentifying && styles.aiBtnDisabled]}
+          onPress={showPhotoOptions}
+          disabled={aiIdentifying}
+        >
+          {aiIdentifying ? (
+            <View style={styles.aiRow}>
+              <ActivityIndicator size="small" color="#7C3AED" />
+              <Text style={styles.aiBtnText}>Analisi in corso...</Text>
+            </View>
+          ) : (
+            <View style={styles.aiRow}>
+              <Ionicons name="sparkles" size={18} color="#7C3AED" />
+              <Text style={styles.aiBtnText}>Riconosci da foto (AI)</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        {aiPreviewUri && aiIdentifying && (
+          <Image source={{ uri: aiPreviewUri }} style={styles.aiPreview} />
         )}
 
         <Field label="Nome prodotto *" value={name} onChange={setName} placeholder="Nome del prodotto"
@@ -682,6 +754,20 @@ const styles = StyleSheet.create({
   },
   micBtnActive: { backgroundColor: '#FEE2E2', borderColor: '#DC2626' },
   micBtnText: { fontSize: 18 },
+
+  // AI riconoscimento foto
+  aiBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#F5F3FF', borderWidth: 1, borderColor: '#DDD6FE',
+    borderRadius: 10, padding: 14, marginTop: 16,
+  },
+  aiBtnDisabled: { opacity: 0.6 },
+  aiRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  aiBtnText: { fontSize: 14, fontWeight: '600', color: '#7C3AED' },
+  aiPreview: {
+    width: '100%', height: 160, borderRadius: 10, marginTop: 10,
+    backgroundColor: '#F3F4F6',
+  },
 
   hint: { fontSize: 12, color: '#9CA3AF', marginTop: 6, marginBottom: 4 },
   chipScroll: { marginBottom: 4 },

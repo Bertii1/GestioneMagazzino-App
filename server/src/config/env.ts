@@ -25,6 +25,7 @@ export const env = {
   CORS_ORIGIN: optional('CORS_ORIGIN', '*'),
   ADMIN_EMAIL: optional('ADMIN_EMAIL', 'admin@magazzino.local'),
   ADMIN_PASSWORD: optional('ADMIN_PASSWORD', 'admin123'),
+  GEMINI_API_KEY: optional('GEMINI_API_KEY', ''),
 } as const;
 
 export const isProd = env.NODE_ENV === 'production';
