@@ -33,7 +33,7 @@ app.use(cors({
 // Rate limiting globale
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minuti
-  max: isProd ? 100 : 1000,
+  max: isProd ? 500 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Troppe richieste, riprova tra qualche minuto.' },
