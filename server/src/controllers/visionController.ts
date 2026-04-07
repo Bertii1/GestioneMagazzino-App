@@ -86,7 +86,12 @@ export const identifyProduct = async (
     }
 
     res.json(parsed);
-  } catch (err) {
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { status?: number } };
+    if (axiosErr.response?.status === 429) {
+      res.status(429).json({ message: 'Limite Gemini AI raggiunto. Riprova tra 30 secondi.' });
+      return;
+    }
     next(err);
   }
 };
