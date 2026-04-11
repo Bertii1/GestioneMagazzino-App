@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, RefreshControl, Alert,
+  StyleSheet, RefreshControl, Alert, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Product, RootStackParamList } from '../../types';
 import { productService } from '../../services/productService';
+import { getServerUrl } from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MainTabs'>;
@@ -61,24 +62,56 @@ export default function ProductListScreen({ navigation }: Props) {
     return '—';
   };
 
-  const renderItem = ({ item }: { item: Product }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => nav.navigate('ProductDetail', { productId: item._id })}
-    >
-      <View style={styles.cardTop}>
-        <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.cardQty}>× {item.quantity}</Text>
-      </View>
-      <View style={styles.cardBottom}>
-        <Text style={styles.cardBarcode}>{item.barcode}</Text>
-        <Text style={styles.cardPosition}>
-          {getShelfCode(item)} · R{item.level}
-          {item.slot ? ` · ${item.slot}` : ''}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: Product }) => {
+    const thumb = item.photos?.[0];
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => nav.navigate('ProductDetail', { productId: item._id })}
+      >
+        <View style={styles.cardRow}>
+          {thumb ? (
+            <Image
+              source={{ uri: `${getServerUrl()}/uploads/products/${thumb}` }}
+              style={styles.cardThumb}
+            />
+          ) : null}
+          <View style={thumb ? styles.cardContent : styles.cardContentFull}>
+            <View style={styles.cardTop}>
+              <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.cardQty}>x {item.quantity}</Text>
+            </View>
+            <View style={styles.cardBottom}>
+              <Text style={styles.cardBarcode}>{item.barcode}</Text>
+              <View style={styles.cardMeta}>
+                {item.condition && (
+                  <View style={[
+                    styles.conditionTag,
+                    item.condition === 'nuovo' && styles.conditionTagNuovo,
+                    item.condition === 'usato' && styles.conditionTagUsato,
+                    item.condition === 'vuoto' && styles.conditionTagVuoto,
+                  ]}>
+                    <Text style={[
+                      styles.conditionTagText,
+                      item.condition === 'nuovo' && styles.conditionTagTextNuovo,
+                      item.condition === 'usato' && styles.conditionTagTextUsato,
+                      item.condition === 'vuoto' && styles.conditionTagTextVuoto,
+                    ]}>
+                      {item.condition.charAt(0).toUpperCase() + item.condition.slice(1)}
+                    </Text>
+                  </View>
+                )}
+                <Text style={styles.cardPosition}>
+                  {getShelfCode(item)} · R{item.level}
+                  {item.slot ? ` · ${item.slot}` : ''}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -142,11 +175,24 @@ const styles = StyleSheet.create({
     elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 4,
   },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardThumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: '#E5E7EB' },
+  cardContent: { flex: 1 },
+  cardContentFull: { flex: 1 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardName: { fontSize: 16, fontWeight: '600', color: '#111827', flex: 1 },
   cardQty: { fontSize: 15, fontWeight: '700', color: '#059669', marginLeft: 8 },
-  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
   cardBarcode: { fontSize: 12, color: '#9CA3AF', fontFamily: 'monospace' },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  conditionTag: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  conditionTagNuovo: { backgroundColor: '#DCFCE7' },
+  conditionTagUsato: { backgroundColor: '#FEF3C7' },
+  conditionTagVuoto: { backgroundColor: '#FEE2E2' },
+  conditionTagText: { fontSize: 10, fontWeight: '700' },
+  conditionTagTextNuovo: { color: '#16A34A' },
+  conditionTagTextUsato: { color: '#D97706' },
+  conditionTagTextVuoto: { color: '#DC2626' },
   cardPosition: { fontSize: 12, color: '#6B7280' },
   empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 60, fontSize: 16 },
   fab: {

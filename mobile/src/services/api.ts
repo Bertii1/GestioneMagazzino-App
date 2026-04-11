@@ -6,12 +6,20 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+let _serverUrl = '';
+
 /**
  * Chiamato da serverStore non appena il server viene trovato o verificato.
  * serverUrl è la base del server, es. "http://192.168.0.240:3000"
  */
 export function setServerUrl(serverUrl: string) {
+  _serverUrl = serverUrl;
   api.defaults.baseURL = `${serverUrl}/api`;
+}
+
+/** Ritorna la base URL del server (senza /api), es. "http://192.168.0.240:3000" */
+export function getServerUrl(): string {
+  return _serverUrl;
 }
 
 // Interceptor: aggiungi JWT ad ogni richiesta

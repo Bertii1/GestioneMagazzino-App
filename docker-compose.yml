@@ -53,6 +53,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD}@mongo:27017/gestione_magazzino?authSource=admin
+    volumes:
+      - uploads_data:/app/uploads
     # Nessuna porta esposta — raggiungibile solo via Caddy
     depends_on:
       mongo:
@@ -118,6 +120,8 @@ services:
 volumes:
   mongo_data:
     name: magazzino_mongo_data
+  uploads_data:
+    name: magazzino_uploads_data
   whisper_cache:
     name: magazzino_whisper_cache
   caddy_data:

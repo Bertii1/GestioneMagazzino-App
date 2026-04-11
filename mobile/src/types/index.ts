@@ -55,12 +55,17 @@ export interface CreateShelfDto {
 
 // ─── Prodotto ─────────────────────────────────────────────────────────────────
 
+export type ProductCondition = 'nuovo' | 'usato' | 'vuoto';
+
 export interface Product {
   _id: string;
   barcode: string;
   name: string;
   description?: string;
   color?: string;       // variante colore/finitura (es. "Nero", "Silver")
+  brand?: string;       // marca del prodotto
+  condition: ProductCondition;
+  photos: string[];
   details?: Record<string, unknown>;
   warehouseId: string | Warehouse;
   shelfId: string | Shelf;
@@ -76,6 +81,8 @@ export interface CreateProductDto {
   name: string;
   description?: string;
   color?: string;
+  brand?: string;
+  condition?: ProductCondition;
   details?: Record<string, unknown>;
   warehouseId: string;
   shelfId: string;

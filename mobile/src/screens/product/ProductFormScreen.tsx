@@ -9,10 +9,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import api from '../../services/api';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList, Warehouse, Shelf } from '../../types';
+import { RootStackParamList, Warehouse, Shelf, ProductCondition } from '../../types';
 import { productService } from '../../services/productService';
 import { warehouseService } from '../../services/warehouseService';
 import { shelfService } from '../../services/shelfService';
+import { getServerUrl } from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductForm'>;
@@ -75,9 +76,18 @@ export default function ProductFormScreen({ route, navigation }: Props) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('');
+  const [brand, setBrand] = useState('');
+  const [brands, setBrands] = useState<string[]>([]);
+  const [brandSearch, setBrandSearch] = useState('');
+  const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
   const [quantity, setQuantity] = useState('1');
+  const [condition, setCondition] = useState<ProductCondition>('nuovo');
   const [level, setLevel] = useState(initialLevel ? String(initialLevel) : '1');
   const [slot, setSlot] = useState('');
+
+  // Foto prodotto (solo in modifica)
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Selezione magazzino/scaffale
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -90,6 +100,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     warehouseService.getAll().then(setWarehouses).catch(() => null);
+    productService.getBrands().then(setBrands).catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -105,6 +116,9 @@ export default function ProductFormScreen({ route, navigation }: Props) {
         setName(p.name);
         setDescription(p.description ?? '');
         setColor(p.color ?? '');
+        setBrand(p.brand ?? '');
+        setCondition(p.condition ?? 'nuovo');
+        setPhotos(p.photos ?? []);
         setQuantity(String(p.quantity));
         setLevel(String(p.level));
         setSlot(p.slot ?? '');
@@ -183,39 +197,71 @@ export default function ProductFormScreen({ route, navigation }: Props) {
     }
   };
 
-  // ── Lookup barcode su UPC Item DB (elettronica) ──────────────────────────────
+  // ── Lookup barcode — chain: UPC Item DB → Barcode Lookup → UPC Database ─────
+  const tryUpcItemDb = async (code: string): Promise<LookupResult | null> => {
+    const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`);
+    if (res.status === 429) return null;
+    if (!res.ok) return null;
+    const json = await res.json();
+    const item = json?.items?.[0];
+    if (!item?.title) return null;
+    return {
+      name: item.title,
+      brand: item.brand || undefined,
+      model: item.model || undefined,
+      color: item.color || undefined,
+      description: item.description || undefined,
+      category: item.category || undefined,
+    };
+  };
+
+  const tryBarcodeLookup = async (code: string): Promise<LookupResult | null> => {
+    const res = await fetch(`https://www.ean-search.org/api?op=barcode-lookup&ean=${code}&format=json`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const items = Array.isArray(json) ? json : [json];
+    const item = items[0];
+    if (!item?.name) return null;
+    return {
+      name: item.name,
+      category: item.categoryName || item.issuingCountry || undefined,
+    };
+  };
+
+  const tryUpcDatabase = async (code: string): Promise<LookupResult | null> => {
+    const res = await fetch(`https://api.upcdatabase.org/product/${code}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json.title && !json.description) return null;
+    return {
+      name: json.title || json.description || '',
+      brand: json.brand || undefined,
+      description: json.description || undefined,
+      category: json.category || undefined,
+    };
+  };
+
   const doLookup = useCallback(async (code: string) => {
     if (!code || code.startsWith('INT-')) return;
     setLooking(true);
     setLookupResult(null);
     try {
-      const res = await fetch(
-        `https://api.upcitemdb.com/prod/trial/lookup?upc=${code.trim()}`
-      );
-      if (res.status === 429) {
-        Alert.alert('Limite raggiunto', 'Troppe ricerche oggi (max 100/giorno).\nCompila manualmente.');
-        return;
-      }
-      if (res.ok) {
-        const json = await res.json();
-        const item = json?.items?.[0];
-        if (item?.title) {
-          const result: LookupResult = {
-            name: item.title,
-            brand: item.brand || undefined,
-            model: item.model || undefined,
-            color: item.color || undefined,
-            description: item.description || undefined,
-            category: item.category || undefined,
-          };
-          setLookupResult(result);
-          setLookupEditName(buildCleanName(result));
-          return;
+      const lookups = [tryUpcItemDb, tryBarcodeLookup, tryUpcDatabase];
+      for (const lookup of lookups) {
+        try {
+          const result = await lookup(code.trim());
+          if (result?.name) {
+            setLookupResult(result);
+            setLookupEditName(buildCleanName(result));
+            return;
+          }
+        } catch {
+          // Fallback al prossimo DB
         }
       }
-      Alert.alert('Non trovato', 'Prodotto non presente nel database.\nCompila manualmente i campi.');
+      Alert.alert('Non trovato', 'Prodotto non presente in nessun database.\nCompila manualmente i campi.');
     } catch {
-      Alert.alert('Errore rete', 'Impossibile connettersi al database prodotti.\nVerifica la connessione internet.');
+      Alert.alert('Errore rete', 'Impossibile connettersi ai database prodotti.\nVerifica la connessione internet.');
     } finally {
       setLooking(false);
     }
@@ -254,6 +300,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
     if (!lookupResult) return;
     setName(lookupEditName.trim() || lookupResult.name);
     if (lookupResult.color) setColor(lookupResult.color);
+    if (lookupResult.brand) setBrand(lookupResult.brand);
     // Descrizione: titolo completo (se diverso dal nome pulito) + descrizione + categoria
     const parts = [
       lookupResult.description,
@@ -300,8 +347,9 @@ export default function ProductFormScreen({ route, navigation }: Props) {
       // Auto-compila i campi con i dati riconosciuti
       if (data.name) setName(data.name);
       if (data.brand) {
-        const desc = [data.brand, data.model && `Modello: ${data.model}`, data.category].filter(Boolean).join(' · ');
-        setDescription(desc);
+        setBrand(data.brand);
+        const desc = [data.model && `Modello: ${data.model}`, data.category].filter(Boolean).join(' · ');
+        if (desc) setDescription(desc);
       }
       if (data.color) setColor(data.color);
       if (data.barcode && !barcode) setBarcode(data.barcode);
@@ -321,6 +369,51 @@ export default function ProductFormScreen({ route, navigation }: Props) {
       { text: 'Fotocamera', onPress: () => identifyFromPhoto('camera') },
       { text: 'Galleria', onPress: () => identifyFromPhoto('gallery') },
       { text: 'Annulla', style: 'cancel' },
+    ]);
+  };
+
+  // ── Foto prodotto (solo modifica) ─────────────────────────────────────────────
+  const handleAddPhoto = async (source: 'camera' | 'gallery') => {
+    if (!productId) return;
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+    if (result.canceled || !result.assets[0]) return;
+
+    setUploadingPhoto(true);
+    try {
+      const res = await productService.uploadPhoto(productId, result.assets[0].uri);
+      setPhotos(res.photos);
+    } catch {
+      Alert.alert('Errore', 'Impossibile caricare la foto');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const showAddPhoto = () => {
+    Alert.alert('Aggiungi foto prodotto', 'Scatta una foto o scegli dalla galleria', [
+      { text: 'Fotocamera', onPress: () => handleAddPhoto('camera') },
+      { text: 'Galleria', onPress: () => handleAddPhoto('gallery') },
+      { text: 'Annulla', style: 'cancel' },
+    ]);
+  };
+
+  const handleRemovePhoto = (filename: string) => {
+    if (!productId) return;
+    Alert.alert('Elimina foto', 'Vuoi rimuovere questa foto?', [
+      { text: 'Annulla', style: 'cancel' },
+      {
+        text: 'Elimina', style: 'destructive',
+        onPress: async () => {
+          try {
+            const res = await productService.deletePhoto(productId, filename);
+            setPhotos(res.photos);
+          } catch {
+            Alert.alert('Errore', 'Impossibile eliminare la foto');
+          }
+        },
+      },
     ]);
   };
 
@@ -344,6 +437,8 @@ export default function ProductFormScreen({ route, navigation }: Props) {
         name: name.trim(),
         description: description.trim() || undefined,
         color: color.trim() || undefined,
+        brand: brand.trim() || undefined,
+        condition,
         warehouseId: selectedWarehouseId,
         shelfId: selectedShelfId,
         level: parseInt(level, 10) || 1,
@@ -509,9 +604,89 @@ export default function ProductFormScreen({ route, navigation }: Props) {
           voiceField="name" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
         <Field label="Colore / Finitura" value={color} onChange={setColor} placeholder="Es. Nero, Silver, Champagne"
           voiceField="color" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
+
+        {/* ── Marca ──────────────────────────────────────────────────── */}
+        <Text style={styles.label}>Marca</Text>
+        <View style={styles.brandContainer}>
+          <View style={styles.brandInputRow}>
+            <TextInput
+              style={[styles.input, styles.brandInput]}
+              value={brandDropdownOpen ? brandSearch : brand}
+              onChangeText={(v) => {
+                setBrandSearch(v);
+                if (!brandDropdownOpen) setBrandDropdownOpen(true);
+              }}
+              onFocus={() => { setBrandSearch(brand); setBrandDropdownOpen(true); }}
+              placeholder="Seleziona o digita marca"
+            />
+            {brand ? (
+              <TouchableOpacity style={styles.brandClearBtn} onPress={() => { setBrand(''); setBrandSearch(''); setBrandDropdownOpen(false); }}>
+                <Ionicons name="close" size={16} color="#DC2626" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {brandDropdownOpen && (
+            <View style={styles.brandDropdown}>
+              {(() => {
+                const q = brandSearch.toLowerCase();
+                const filtered = brands.filter((b) => b.toLowerCase().includes(q));
+                const exactMatch = brands.some((b) => b.toLowerCase() === q);
+                return (
+                  <ScrollView style={styles.brandDropdownScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {filtered.map((b) => (
+                      <TouchableOpacity
+                        key={b}
+                        style={styles.brandOption}
+                        onPress={() => { setBrand(b); setBrandDropdownOpen(false); }}
+                      >
+                        <Text style={[styles.brandOptionText, brand === b && styles.brandOptionTextActive]}>{b}</Text>
+                      </TouchableOpacity>
+                    ))}
+                    {q.length > 0 && !exactMatch && (
+                      <TouchableOpacity
+                        style={styles.brandOptionNew}
+                        onPress={() => {
+                          const newBrand = brandSearch.trim();
+                          if (newBrand) {
+                            setBrand(newBrand);
+                            setBrands((prev) => [...prev, newBrand].sort((a, b) => a.localeCompare(b)));
+                          }
+                          setBrandDropdownOpen(false);
+                        }}
+                      >
+                        <Ionicons name="add-circle-outline" size={16} color="#2563EB" />
+                        <Text style={styles.brandOptionNewText}>Aggiungi "{brandSearch.trim()}"</Text>
+                      </TouchableOpacity>
+                    )}
+                    {filtered.length === 0 && q.length === 0 && (
+                      <Text style={styles.brandEmpty}>Nessuna marca registrata</Text>
+                    )}
+                  </ScrollView>
+                );
+              })()}
+            </View>
+          )}
+        </View>
+
         <Field label="Descrizione" value={description} onChange={setDescription} placeholder="Opzionale" multiline
           voiceField="description" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
         <Field label="Quantità" value={quantity} onChange={setQuantity} placeholder="1" keyboardType="numeric" />
+
+        {/* ── Stato prodotto ──────────────────────────────────────────── */}
+        <Text style={styles.label}>Stato</Text>
+        <View style={styles.conditionRow}>
+          {(['nuovo', 'usato', 'vuoto'] as const).map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={[styles.conditionBtn, condition === c && styles.conditionBtnActive]}
+              onPress={() => setCondition(c)}
+            >
+              <Text style={[styles.conditionBtnText, condition === c && styles.conditionBtnTextActive]}>
+                {c.charAt(0).toUpperCase() + c.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         {/* ── Selezione magazzino ──────────────────────────────────────── */}
         <Text style={styles.label}>Magazzino *</Text>
@@ -582,6 +757,38 @@ export default function ProductFormScreen({ route, navigation }: Props) {
 
         <Field label="Slot / Posizione sul ripiano" value={slot} onChange={setSlot} placeholder="Es. L1, C2 (opzionale)"
           voiceField="slot" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
+
+        {/* ── Foto prodotto (solo in modifica) ───────────────────────── */}
+        {isEdit && (
+          <>
+            <Text style={styles.label}>Foto prodotto</Text>
+            <View style={styles.photoGrid}>
+              {photos.map((filename) => (
+                <TouchableOpacity key={filename} onLongPress={() => handleRemovePhoto(filename)} style={styles.photoWrap}>
+                  <Image
+                    source={{ uri: `${getServerUrl()}/uploads/products/${filename}` }}
+                    style={styles.photoThumb}
+                  />
+                </TouchableOpacity>
+              ))}
+              {photos.length < 5 && (
+                <TouchableOpacity style={styles.addPhotoBox} onPress={showAddPhoto} disabled={uploadingPhoto}>
+                  {uploadingPhoto
+                    ? <ActivityIndicator size="small" color="#2563EB" />
+                    : <Ionicons name="add-circle-outline" size={28} color="#9CA3AF" />
+                  }
+                  <Text style={styles.addPhotoBoxText}>{uploadingPhoto ? 'Caricamento...' : 'Aggiungi'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {photos.length > 0 && (
+              <Text style={styles.hint}>Tieni premuto su una foto per eliminarla</Text>
+            )}
+            {!isEdit && (
+              <Text style={styles.hint}>Potrai aggiungere foto dopo il salvataggio.</Text>
+            )}
+          </>
+        )}
 
         <TouchableOpacity
           style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
@@ -662,6 +869,29 @@ const styles = StyleSheet.create({
   },
   inputMultiline: { minHeight: 80, textAlignVertical: 'top' },
 
+  // Brand select
+  brandContainer: { zIndex: 10 },
+  brandInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brandInput: { flex: 1 },
+  brandClearBtn: { backgroundColor: '#FEE2E2', borderRadius: 8, padding: 10 },
+  brandDropdown: {
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#D1D5DB',
+    borderRadius: 8, marginTop: 4, maxHeight: 180,
+    elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 4,
+  },
+  brandDropdownScroll: { padding: 4 },
+  brandOption: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  brandOptionText: { fontSize: 14, color: '#374151' },
+  brandOptionTextActive: { color: '#2563EB', fontWeight: '700' },
+  brandOptionNew: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#EFF6FF',
+    borderRadius: 6, margin: 4,
+  },
+  brandOptionNewText: { fontSize: 14, color: '#2563EB', fontWeight: '600' },
+  brandEmpty: { fontSize: 13, color: '#9CA3AF', padding: 12, textAlign: 'center' },
+
   // Barcode row
   barcodeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   barcodeInput: { flex: 1 },
@@ -714,6 +944,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10, alignItems: 'center',
   },
   lookupIgnoreText: { color: '#374151', fontWeight: '600', fontSize: 13 },
+
+  // Condition picker
+  conditionRow: { flexDirection: 'row', gap: 10 },
+  conditionBtn: {
+    flex: 1, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8,
+    paddingVertical: 10, alignItems: 'center', backgroundColor: '#fff',
+  },
+  conditionBtnActive: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+  conditionBtnText: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  conditionBtnTextActive: { color: '#fff' },
 
   // Level picker
   levelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -768,6 +1008,17 @@ const styles = StyleSheet.create({
     width: '100%', height: 160, borderRadius: 10, marginTop: 10,
     backgroundColor: '#F3F4F6',
   },
+
+  // Photo grid
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoWrap: { borderRadius: 8, overflow: 'hidden' },
+  photoThumb: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#E5E7EB' },
+  addPhotoBox: {
+    width: 80, height: 80, borderRadius: 8,
+    borderWidth: 1.5, borderColor: '#D1D5DB', borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9FAFB',
+  },
+  addPhotoBoxText: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
 
   hint: { fontSize: 12, color: '#9CA3AF', marginTop: 6, marginBottom: 4 },
   chipScroll: { marginBottom: 4 },

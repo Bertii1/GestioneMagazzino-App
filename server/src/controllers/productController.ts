@@ -1,7 +1,18 @@
+import path from 'path';
+import fs from 'fs';
 import { Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import Product from '../models/Product';
 import { AuthRequest } from '../middleware/auth';
+
+export const getBrands = async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const brands = await Product.distinct('brand', { brand: { $nin: [null, ''] } });
+    res.json(brands.sort((a: string, b: string) => a.localeCompare(b)));
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const getProducts = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -93,6 +104,14 @@ export const deleteProduct = async (req: AuthRequest, res: Response, next: NextF
       res.status(404).json({ message: 'Prodotto non trovato' });
       return;
     }
+
+    // Rimuovi foto da disco
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'products');
+    for (const filename of product.photos) {
+      const filePath = path.join(uploadsDir, filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
     res.json({ message: 'Prodotto eliminato' });
   } catch (err) {
     next(err);

@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -49,6 +50,9 @@ const authLimiter = rateLimit({
 });
 
 app.use(express.json({ limit: '10mb' }));
+
+// File statici — foto prodotti
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);

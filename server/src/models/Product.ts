@@ -1,10 +1,15 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export type ProductCondition = 'nuovo' | 'usato' | 'vuoto';
+
 export interface IProduct extends Document {
   barcode: string;                        // codice a barre univoco
   name: string;
   description?: string;
   color?: string;                         // variante colore/finitura (es. "Nero", "Silver")
+  brand?: string;                         // marca del prodotto
+  condition: ProductCondition;            // stato del prodotto
+  photos: string[];                       // nomi file foto (serviti da /uploads/products/)
   details?: Map<string, unknown>;         // campi flessibili aggiuntivi
   warehouseId: mongoose.Types.ObjectId;
   shelfId: mongoose.Types.ObjectId;
@@ -21,6 +26,9 @@ const ProductSchema = new Schema<IProduct>(
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     color: { type: String, trim: true },
+    brand: { type: String, trim: true },
+    condition: { type: String, enum: ['nuovo', 'usato', 'vuoto'], default: 'nuovo' },
+    photos: { type: [String], default: [] },
     details: { type: Map, of: Schema.Types.Mixed },
     warehouseId: { type: Schema.Types.ObjectId, ref: 'Warehouse', required: true },
     shelfId: { type: Schema.Types.ObjectId, ref: 'Shelf', required: true },

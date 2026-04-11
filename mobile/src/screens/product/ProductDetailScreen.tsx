@@ -1,19 +1,25 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator,
-  Alert, ScrollView, TouchableOpacity,
+  Alert, ScrollView, TouchableOpacity, Image, Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { RootStackParamList, Product, Shelf, Warehouse } from '../../types';
 import { productService } from '../../services/productService';
+import { getServerUrl } from '../../services/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
+
+const PHOTO_SIZE = (Dimensions.get('window').width - 48) / 3;
 
 export default function ProductDetailScreen({ route, navigation }: Props) {
   const { productId } = route.params;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -24,6 +30,48 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         .finally(() => setLoading(false));
     }, [productId])
   );
+
+  const addPhoto = async (source: 'camera' | 'gallery') => {
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+    if (result.canceled || !result.assets[0]) return;
+
+    setUploading(true);
+    try {
+      const { photos } = await productService.uploadPhoto(productId, result.assets[0].uri);
+      setProduct((prev) => prev ? { ...prev, photos } : prev);
+    } catch {
+      Alert.alert('Errore', 'Impossibile caricare la foto');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const showAddPhotoOptions = () => {
+    Alert.alert('Aggiungi foto', 'Scatta una foto o scegli dalla galleria', [
+      { text: 'Fotocamera', onPress: () => addPhoto('camera') },
+      { text: 'Galleria', onPress: () => addPhoto('gallery') },
+      { text: 'Annulla', style: 'cancel' },
+    ]);
+  };
+
+  const handleDeletePhoto = (filename: string) => {
+    Alert.alert('Elimina foto', 'Vuoi rimuovere questa foto?', [
+      { text: 'Annulla', style: 'cancel' },
+      {
+        text: 'Elimina', style: 'destructive',
+        onPress: async () => {
+          try {
+            const { photos } = await productService.deletePhoto(productId, filename);
+            setProduct((prev) => prev ? { ...prev, photos } : prev);
+          } catch {
+            Alert.alert('Errore', 'Impossibile eliminare la foto');
+          }
+        },
+      },
+    ]);
+  };
 
   const handleDelete = () => {
     Alert.alert('Elimina prodotto', 'Sei sicuro?', [
@@ -55,12 +103,42 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.name}>{product.name}</Text>
+        {product.brand ? (
+          <Text style={styles.brandText}>{product.brand}</Text>
+        ) : null}
         {product.color ? (
           <View style={styles.colorBadge}>
             <Text style={styles.colorBadgeText}>{product.color}</Text>
           </View>
         ) : null}
         <Text style={styles.barcode}>{product.barcode}</Text>
+      </View>
+
+      {/* Foto */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Foto</Text>
+        <View style={styles.photoGrid}>
+          {(product.photos ?? []).map((filename) => (
+            <TouchableOpacity key={filename} onLongPress={() => handleDeletePhoto(filename)} style={styles.photoWrap}>
+              <Image
+                source={{ uri: `${getServerUrl()}/uploads/products/${filename}` }}
+                style={styles.photoThumb}
+              />
+            </TouchableOpacity>
+          ))}
+          {(product.photos ?? []).length < 5 && (
+            <TouchableOpacity style={styles.addPhotoBtn} onPress={showAddPhotoOptions} disabled={uploading}>
+              {uploading
+                ? <ActivityIndicator size="small" color="#2563EB" />
+                : <Ionicons name="add-circle-outline" size={32} color="#9CA3AF" />
+              }
+              <Text style={styles.addPhotoText}>{uploading ? 'Caricamento...' : 'Aggiungi'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {(product.photos ?? []).length > 0 && (
+          <Text style={styles.photoHint}>Tieni premuto su una foto per eliminarla</Text>
+        )}
       </View>
 
       {/* Posizione */}
@@ -78,6 +156,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Dettagli</Text>
         <Row label="Quantità" value={String(product.quantity)} />
+        <Row label="Stato" value={product.condition ? product.condition.charAt(0).toUpperCase() + product.condition.slice(1) : 'Nuovo'} />
         {product.color && <Row label="Colore / Finitura" value={product.color} />}
         {product.description && <Row label="Descrizione" value={product.description} />}
         {product.details &&
@@ -123,6 +202,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#EFF6FF', borderRadius: 12, padding: 16, marginBottom: 16 },
   name: { fontSize: 22, fontWeight: '700', color: '#111827' },
+  brandText: { fontSize: 14, fontWeight: '600', color: '#6B7280', marginTop: 2 },
   colorBadge: {
     alignSelf: 'flex-start', backgroundColor: '#1D4ED8',
     borderRadius: 6, paddingHorizontal: 10, paddingVertical: 3, marginTop: 6,
@@ -132,6 +212,16 @@ const styles = StyleSheet.create({
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   positionCard: { backgroundColor: '#fff', borderRadius: 10, padding: 4, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  photoWrap: { borderRadius: 8, overflow: 'hidden' },
+  photoThumb: { width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: 8, backgroundColor: '#E5E7EB' },
+  addPhotoBtn: {
+    width: PHOTO_SIZE, height: PHOTO_SIZE, borderRadius: 8,
+    borderWidth: 1.5, borderColor: '#D1D5DB', borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9FAFB',
+  },
+  addPhotoText: { fontSize: 11, color: '#9CA3AF', marginTop: 4 },
+  photoHint: { fontSize: 11, color: '#9CA3AF', marginTop: 6 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   editBtn: { flex: 1, backgroundColor: '#2563EB', borderRadius: 8, padding: 14, alignItems: 'center' },
   editBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
