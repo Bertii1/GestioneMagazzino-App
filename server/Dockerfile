@@ -18,6 +18,9 @@ FROM node:20-alpine AS production
 ENV NODE_ENV=production
 WORKDIR /app
 
+# mongodump per endpoint backup
+RUN apk add --no-cache mongodb-tools
+
 # Solo le dipendenze di produzione
 COPY package*.json ./
 RUN npm install --omit=dev && \
