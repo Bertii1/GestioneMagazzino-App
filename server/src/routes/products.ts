@@ -2,9 +2,11 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import {
   getBrands,
+  getCategories,
   getProducts,
   getProduct,
   getProductByBarcode,
+  getCatalogByBarcode,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -19,8 +21,14 @@ router.use(protect);
 // Lista marche distinte (prima delle route parametriche)
 router.get('/brands', getBrands);
 
+// Lista categorie distinte
+router.get('/categories', getCategories);
+
 // Ricerca per barcode (prima della route /:id per evitare conflitti)
 router.get('/barcode/:barcode', getProductByBarcode);
+
+// Lookup catalogo interno (failover offline per lookup web)
+router.get('/catalog/:barcode', getCatalogByBarcode);
 
 router.get('/', getProducts);
 router.get('/:id', getProduct);

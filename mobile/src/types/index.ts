@@ -64,6 +64,7 @@ export interface Product {
   description?: string;
   color?: string;       // variante colore/finitura (es. "Nero", "Silver")
   brand?: string;       // marca del prodotto
+  category?: string;    // categoria del prodotto
   condition: ProductCondition;
   photos: string[];
   details?: Record<string, unknown>;
@@ -82,6 +83,7 @@ export interface CreateProductDto {
   description?: string;
   color?: string;
   brand?: string;
+  category?: string;
   condition?: ProductCondition;
   details?: Record<string, unknown>;
   warehouseId: string;

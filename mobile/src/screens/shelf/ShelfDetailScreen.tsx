@@ -239,6 +239,23 @@ export default function ShelfDetailScreen({ route, navigation }: Props) {
                             {product.color ? (
                               <Text style={styles.productColor}>{product.color}</Text>
                             ) : null}
+                            {product.condition && (
+                              <View style={[
+                                styles.conditionTag,
+                                product.condition === 'nuovo' && styles.conditionTagNuovo,
+                                product.condition === 'usato' && styles.conditionTagUsato,
+                                product.condition === 'vuoto' && styles.conditionTagVuoto,
+                              ]}>
+                                <Text style={[
+                                  styles.conditionTagText,
+                                  product.condition === 'nuovo' && styles.conditionTagTextNuovo,
+                                  product.condition === 'usato' && styles.conditionTagTextUsato,
+                                  product.condition === 'vuoto' && styles.conditionTagTextVuoto,
+                                ]}>
+                                  {product.condition.charAt(0).toUpperCase() + product.condition.slice(1)}
+                                </Text>
+                              </View>
+                            )}
                           </View>
                           <Text style={styles.productBarcode}>{product.barcode}</Text>
                         </TouchableOpacity>
@@ -349,6 +366,14 @@ const styles = StyleSheet.create({
     fontSize: 11, fontWeight: '700', color: '#1D4ED8',
     backgroundColor: '#DBEAFE', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4,
   },
+  conditionTag: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
+  conditionTagNuovo: { backgroundColor: '#DCFCE7' },
+  conditionTagUsato: { backgroundColor: '#FEF3C7' },
+  conditionTagVuoto: { backgroundColor: '#FEE2E2' },
+  conditionTagText: { fontSize: 10, fontWeight: '700' },
+  conditionTagTextNuovo: { color: '#16A34A' },
+  conditionTagTextUsato: { color: '#D97706' },
+  conditionTagTextVuoto: { color: '#DC2626' },
   productBarcode: { fontSize: 12, color: '#9CA3AF', fontFamily: 'monospace', marginTop: 2 },
   productRight: { alignItems: 'flex-end', marginRight: 8 },
   productSlot: {

@@ -80,6 +80,10 @@ export default function ProductFormScreen({ route, navigation }: Props) {
   const [brands, setBrands] = useState<string[]>([]);
   const [brandSearch, setBrandSearch] = useState('');
   const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
+  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [quantity, setQuantity] = useState('1');
   const [condition, setCondition] = useState<ProductCondition>('nuovo');
   const [level, setLevel] = useState(initialLevel ? String(initialLevel) : '1');
@@ -101,6 +105,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
   useEffect(() => {
     warehouseService.getAll().then(setWarehouses).catch(() => null);
     productService.getBrands().then(setBrands).catch(() => null);
+    productService.getCategories().then(setCategories).catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -117,6 +122,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
         setDescription(p.description ?? '');
         setColor(p.color ?? '');
         setBrand(p.brand ?? '');
+        setCategory(p.category ?? '');
         setCondition(p.condition ?? 'nuovo');
         setPhotos(p.photos ?? []);
         setQuantity(String(p.quantity));
@@ -197,7 +203,19 @@ export default function ProductFormScreen({ route, navigation }: Props) {
     }
   };
 
-  // ── Lookup barcode — chain: UPC Item DB → Barcode Lookup → UPC Database ─────
+  // ── Lookup barcode — chain: catalogo interno → UPC Item DB → Barcode Lookup → UPC Database ─────
+  const tryInternalCatalog = async (code: string): Promise<LookupResult | null> => {
+    const entry = await productService.lookupCatalog(code);
+    if (!entry?.name) return null;
+    return {
+      name: entry.name,
+      brand: entry.brand || undefined,
+      color: entry.color || undefined,
+      description: entry.description || undefined,
+      category: entry.category || undefined,
+    };
+  };
+
   const tryUpcItemDb = async (code: string): Promise<LookupResult | null> => {
     const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`);
     if (res.status === 429) return null;
@@ -246,7 +264,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
     setLooking(true);
     setLookupResult(null);
     try {
-      const lookups = [tryUpcItemDb, tryBarcodeLookup, tryUpcDatabase];
+      const lookups = [tryInternalCatalog, tryUpcItemDb, tryBarcodeLookup, tryUpcDatabase];
       for (const lookup of lookups) {
         try {
           const result = await lookup(code.trim());
@@ -438,6 +456,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
         description: description.trim() || undefined,
         color: color.trim() || undefined,
         brand: brand.trim() || undefined,
+        category: category.trim() || undefined,
         condition,
         warehouseId: selectedWarehouseId,
         shelfId: selectedShelfId,
@@ -660,6 +679,69 @@ export default function ProductFormScreen({ route, navigation }: Props) {
                     )}
                     {filtered.length === 0 && q.length === 0 && (
                       <Text style={styles.brandEmpty}>Nessuna marca registrata</Text>
+                    )}
+                  </ScrollView>
+                );
+              })()}
+            </View>
+          )}
+        </View>
+
+        {/* ── Categoria ──────────────────────────────────────────────── */}
+        <Text style={styles.label}>Categoria</Text>
+        <View style={styles.brandContainer}>
+          <View style={styles.brandInputRow}>
+            <TextInput
+              style={[styles.input, styles.brandInput]}
+              value={categoryDropdownOpen ? categorySearch : category}
+              onChangeText={(v) => {
+                setCategorySearch(v);
+                if (!categoryDropdownOpen) setCategoryDropdownOpen(true);
+              }}
+              onFocus={() => { setCategorySearch(category); setCategoryDropdownOpen(true); }}
+              placeholder="Seleziona o digita categoria"
+            />
+            {category ? (
+              <TouchableOpacity style={styles.brandClearBtn} onPress={() => { setCategory(''); setCategorySearch(''); setCategoryDropdownOpen(false); }}>
+                <Ionicons name="close" size={16} color="#DC2626" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {categoryDropdownOpen && (
+            <View style={styles.brandDropdown}>
+              {(() => {
+                const q = categorySearch.toLowerCase();
+                const filtered = categories.filter((c) => c.toLowerCase().includes(q));
+                const exactMatch = categories.some((c) => c.toLowerCase() === q);
+                return (
+                  <ScrollView style={styles.brandDropdownScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {filtered.map((c) => (
+                      <TouchableOpacity
+                        key={c}
+                        style={styles.brandOption}
+                        onPress={() => { setCategory(c); setCategoryDropdownOpen(false); }}
+                      >
+                        <Text style={[styles.brandOptionText, category === c && styles.brandOptionTextActive]}>{c}</Text>
+                      </TouchableOpacity>
+                    ))}
+                    {q.length > 0 && !exactMatch && (
+                      <TouchableOpacity
+                        style={styles.brandOptionNew}
+                        onPress={() => {
+                          const newCat = categorySearch.trim();
+                          if (newCat) {
+                            setCategory(newCat);
+                            setCategories((prev) => [...prev, newCat].sort((a, b) => a.localeCompare(b)));
+                          }
+                          setCategoryDropdownOpen(false);
+                        }}
+                      >
+                        <Ionicons name="add-circle-outline" size={16} color="#2563EB" />
+                        <Text style={styles.brandOptionNewText}>Aggiungi "{categorySearch.trim()}"</Text>
+                      </TouchableOpacity>
+                    )}
+                    {filtered.length === 0 && q.length === 0 && (
+                      <Text style={styles.brandEmpty}>Nessuna categoria registrata</Text>
                     )}
                   </ScrollView>
                 );

@@ -17,8 +17,9 @@ export default function WarehouseListScreen({ navigation }: Props) {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Campi form creazione
+  // Campi form creazione/modifica
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newWidth, setNewWidth] = useState('10');
@@ -47,6 +48,7 @@ export default function WarehouseListScreen({ navigation }: Props) {
   };
 
   const openModal = () => {
+    setEditingId(null);
     setNewName('');
     setNewDesc('');
     setNewWidth('10');
@@ -54,7 +56,16 @@ export default function WarehouseListScreen({ navigation }: Props) {
     setModalVisible(true);
   };
 
-  const handleCreate = async () => {
+  const openEditModal = (wh: Warehouse) => {
+    setEditingId(wh._id);
+    setNewName(wh.name);
+    setNewDesc(wh.description ?? '');
+    setNewWidth(String(wh.gridWidth));
+    setNewHeight(String(wh.gridHeight));
+    setModalVisible(true);
+  };
+
+  const handleSave = async () => {
     if (!newName.trim()) {
       Alert.alert('Errore', 'Il nome del magazzino è obbligatorio');
       return;
@@ -67,16 +78,25 @@ export default function WarehouseListScreen({ navigation }: Props) {
     }
     setSaving(true);
     try {
-      await warehouseService.create({
-        name: newName.trim(),
-        description: newDesc.trim() || undefined,
-        gridWidth: w,
-        gridHeight: h,
-      });
+      if (editingId) {
+        await warehouseService.update(editingId, {
+          name: newName.trim(),
+          description: newDesc.trim() || undefined,
+          gridWidth: w,
+          gridHeight: h,
+        });
+      } else {
+        await warehouseService.create({
+          name: newName.trim(),
+          description: newDesc.trim() || undefined,
+          gridWidth: w,
+          gridHeight: h,
+        });
+      }
       setModalVisible(false);
       await load();
     } catch {
-      Alert.alert('Errore', 'Impossibile creare il magazzino');
+      Alert.alert('Errore', editingId ? 'Impossibile aggiornare il magazzino' : 'Impossibile creare il magazzino');
     } finally {
       setSaving(false);
     }
@@ -122,6 +142,13 @@ export default function WarehouseListScreen({ navigation }: Props) {
         <Text style={styles.cardMeta}>
           {item.gridWidth} × {item.gridHeight}
         </Text>
+        <TouchableOpacity
+          style={styles.editBtn}
+          onPress={() => openEditModal(item)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="pencil-outline" size={18} color="#2563EB" />
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteBtn}
           onPress={() => handleDeleteWarehouse(item)}
@@ -169,7 +196,7 @@ export default function WarehouseListScreen({ navigation }: Props) {
         >
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nuovo Magazzino</Text>
+              <Text style={styles.modalTitle}>{editingId ? 'Modifica Magazzino' : 'Nuovo Magazzino'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
@@ -218,11 +245,13 @@ export default function WarehouseListScreen({ navigation }: Props) {
 
               <TouchableOpacity
                 style={[styles.createBtn, saving && styles.createBtnDisabled]}
-                onPress={handleCreate}
+                onPress={handleSave}
                 disabled={saving}
               >
                 <Text style={styles.createBtnText}>
-                  {saving ? 'Creazione...' : 'Crea magazzino'}
+                  {saving
+                    ? (editingId ? 'Salvataggio...' : 'Creazione...')
+                    : (editingId ? 'Salva modifiche' : 'Crea magazzino')}
                 </Text>
               </TouchableOpacity>
             </ScrollView>
@@ -248,8 +277,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
   },
   cardDescription: { marginTop: 8, fontSize: 14, color: '#6B7280' },
+  editBtn: {
+    padding: 8, borderRadius: 6, backgroundColor: '#EFF6FF', marginLeft: 10,
+  },
   deleteBtn: {
-    padding: 8, borderRadius: 6, backgroundColor: '#FEF2F2', marginLeft: 10,
+    padding: 8, borderRadius: 6, backgroundColor: '#FEF2F2', marginLeft: 8,
   },
   empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 60, fontSize: 16, lineHeight: 26 },
   fab: {

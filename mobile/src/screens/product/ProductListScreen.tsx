@@ -101,6 +101,11 @@ export default function ProductListScreen({ navigation }: Props) {
                     </Text>
                   </View>
                 )}
+                {item.color ? (
+                  <View style={styles.colorTag}>
+                    <Text style={styles.colorTagText}>{item.color}</Text>
+                  </View>
+                ) : null}
                 <Text style={styles.cardPosition}>
                   {getShelfCode(item)} · R{item.level}
                   {item.slot ? ` · ${item.slot}` : ''}
@@ -193,6 +198,11 @@ const styles = StyleSheet.create({
   conditionTagTextNuovo: { color: '#16A34A' },
   conditionTagTextUsato: { color: '#D97706' },
   conditionTagTextVuoto: { color: '#DC2626' },
+  colorTag: {
+    borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
+    backgroundColor: '#DBEAFE',
+  },
+  colorTagText: { fontSize: 10, fontWeight: '700', color: '#1D4ED8' },
   cardPosition: { fontSize: 12, color: '#6B7280' },
   empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 60, fontSize: 16 },
   fab: {

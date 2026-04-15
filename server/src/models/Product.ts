@@ -8,6 +8,7 @@ export interface IProduct extends Document {
   description?: string;
   color?: string;                         // variante colore/finitura (es. "Nero", "Silver")
   brand?: string;                         // marca del prodotto
+  category?: string;                      // categoria del prodotto
   condition: ProductCondition;            // stato del prodotto
   photos: string[];                       // nomi file foto (serviti da /uploads/products/)
   details?: Map<string, unknown>;         // campi flessibili aggiuntivi
@@ -27,6 +28,7 @@ const ProductSchema = new Schema<IProduct>(
     description: { type: String, trim: true },
     color: { type: String, trim: true },
     brand: { type: String, trim: true },
+    category: { type: String, trim: true },
     condition: { type: String, enum: ['nuovo', 'usato', 'vuoto'], default: 'nuovo' },
     photos: { type: [String], default: [] },
     details: { type: Map, of: Schema.Types.Mixed },

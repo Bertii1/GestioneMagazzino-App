@@ -7,6 +7,11 @@ export const productService = {
     return data;
   },
 
+  async getCategories(): Promise<string[]> {
+    const { data } = await api.get<string[]>('/products/categories');
+    return data;
+  },
+
   async getAll(params?: { warehouseId?: string; shelfId?: string; q?: string }): Promise<Product[]> {
     const { data } = await api.get<Product[]>('/products', { params });
     return data;
@@ -20,6 +25,22 @@ export const productService = {
   async getByBarcode(barcode: string): Promise<Product> {
     const { data } = await api.get<Product>(`/products/barcode/${barcode}`);
     return data;
+  },
+
+  async lookupCatalog(barcode: string): Promise<{
+    barcode: string;
+    name: string;
+    description?: string;
+    color?: string;
+    brand?: string;
+    category?: string;
+  } | null> {
+    try {
+      const { data } = await api.get(`/products/catalog/${barcode}`);
+      return data;
+    } catch {
+      return null;
+    }
   },
 
   async create(dto: CreateProductDto): Promise<Product> {
