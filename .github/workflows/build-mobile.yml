@@ -1,0 +1,107 @@
+name: Build Mobile App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/build-mobile.yml'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options: [android, ios, all]
+      bump:
+        description: 'Version bump'
+        required: false
+        default: 'none'
+        type: choice
+        options: [none, patch, minor, major]
+
+concurrency:
+  group: build-mobile
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Bump version
+        if: inputs.bump && inputs.bump != 'none'
+        run: |
+          CURRENT=$(node -e "console.log(require('./app.json').expo.version)")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          case "${{ inputs.bump }}" in
+            patch) PATCH=$((PATCH + 1)) ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          node -e "
+            const fs = require('fs');
+            const json = require('./app.json');
+            json.expo.version = '$NEW_VERSION';
+            const build = parseInt(json.expo.ios?.buildNumber || '0') + 1;
+            json.expo.ios = { ...json.expo.ios, buildNumber: String(build) };
+            json.expo.android = { ...json.expo.android, versionCode: build };
+            fs.writeFileSync('./app.json', JSON.stringify(json, null, 2) + '\n');
+          "
+
+          npm version "$NEW_VERSION" --no-git-tag-version --silent
+          echo "Bumped: $CURRENT → $NEW_VERSION"
+
+      - name: Determine platform
+        id: platform
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.platform }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=android" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Android APK
+        if: steps.platform.outputs.value == 'android' || steps.platform.outputs.value == 'all'
+        run: eas build --platform android --profile preview --non-interactive
+
+      - name: Build iOS
+        if: steps.platform.outputs.value == 'ios' || steps.platform.outputs.value == 'all'
+        run: eas build --platform ios --profile preview --non-interactive
+
+      - name: Print build URLs
+        if: always()
+        run: |
+          echo "📱 Check builds at:"
+          echo "https://expo.dev/accounts/3n3rgy07/projects/gestione-magazzino/builds"
