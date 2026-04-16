@@ -6,7 +6,6 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Print from 'expo-print';
-import QRCode from 'qrcode';
 import { shelfService } from '../../services/shelfService';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types';
@@ -72,15 +71,10 @@ export default function BatchQRPrintScreen({ route }: Props) {
     }
     setPrinting(true);
     try {
-      // Genera SVG QR per ogni ripiano selezionato
-      const cards = await Promise.all(
-        selected.map(async (item) => {
-          const value = `${SHELF_QR_PREFIX}${item.shelfId}/level/${item.level}`;
-          const svg = await QRCode.toString(value, { type: 'svg', margin: 1, width: 150 });
-          return { ...item, svg };
-        })
-      );
-
+      const cards = selected.map((item) => ({
+        ...item,
+        value: `${SHELF_QR_PREFIX}${item.shelfId}/level/${item.level}`,
+      }));
       const html = buildHTML(cards);
       await Print.printAsync({ html });
     } catch (err) {
@@ -99,7 +93,6 @@ export default function BatchQRPrintScreen({ route }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Barra selezione */}
       <View style={styles.selBar}>
         <Text style={styles.selText}>{selectedCount} / {items.length} ripiani selezionati</Text>
         <View style={styles.selActions}>
@@ -134,7 +127,6 @@ export default function BatchQRPrintScreen({ route }: Props) {
         )}
       />
 
-      {/* Pulsante stampa */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.printBtn, (printing || selectedCount === 0) && styles.printBtnDisabled]}
@@ -146,7 +138,7 @@ export default function BatchQRPrintScreen({ route }: Props) {
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="print-outline" size={20} color="#fff" />
-              <Text style={styles.printBtnText}>Stampa {selectedCount} QR</Text>
+              <Text style={styles.printBtnText}>Stampa {selectedCount} barcode</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -156,13 +148,17 @@ export default function BatchQRPrintScreen({ route }: Props) {
 }
 
 function buildHTML(
-  cards: Array<{ shelfCode: string; shelfName?: string; level: number; svg: string }>
+  cards: Array<{ shelfCode: string; shelfName?: string; level: number; value: string }>
 ): string {
+  const barcodeInits = cards
+    .map((c, i) => `JsBarcode('#bc${i}', ${JSON.stringify(c.value)}, {format:'CODE128',width:1.8,height:60,margin:6,displayValue:false});`)
+    .join('\n    ');
+
   const cardsHTML = cards
     .map(
-      (c) => `
+      (c, i) => `
     <div class="card">
-      <div class="qr">${c.svg}</div>
+      <svg id="bc${i}"></svg>
       <p class="label">Scaffale ${c.shelfCode} · Ripiano ${c.level}</p>
     </div>`
     )
@@ -177,16 +173,22 @@ function buildHTML(
   body { font-family: Arial, sans-serif; background: white; padding: 12px; }
   .grid { display: flex; flex-wrap: wrap; gap: 12px; }
   .card {
-    width: 160px; text-align: center; padding: 10px;
+    text-align: center; padding: 10px;
     border: 1px solid #e5e7eb; border-radius: 8px;
     break-inside: avoid; page-break-inside: avoid;
   }
-  .qr svg { width: 140px; height: 140px; display: block; margin: 0 auto; }
+  svg { display: block; margin: 0 auto; }
   .label { font-size: 11px; color: #6b7280; margin-top: 6px; }
 </style>
 </head>
 <body>
   <div class="grid">${cardsHTML}</div>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script>
+    window.onload = function() {
+      ${barcodeInits}
+    };
+  </script>
 </body>
 </html>`;
 }
@@ -217,7 +219,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginRight: 14,
   },
   checkboxOn: { backgroundColor: '#2563EB', borderColor: '#2563EB' },
-  checkmark: { color: '#fff', fontSize: 14, fontWeight: '700' },
   rowInfo: { flex: 1 },
   rowTitle: { fontSize: 15, fontWeight: '600', color: '#111827' },
   rowName: { fontSize: 12, color: '#6B7280', marginTop: 2 },
