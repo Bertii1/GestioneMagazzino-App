@@ -9,6 +9,7 @@ import {
 
 import { useAuthStore } from '../store/authStore';
 import { useServerStore } from '../store/serverStore';
+import { useUpdateChecker } from '../hooks/useUpdateChecker';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../types';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -233,6 +234,7 @@ const ss = StyleSheet.create({
 export default function AppNavigator() {
   const { serverUrl, isDiscovering, progress, discover, setManualUrl } = useServerStore();
   const { isAuthenticated, isLoading, restoreSession, mustChangePassword } = useAuthStore();
+  const { checking: checkingUpdates, updating } = useUpdateChecker(serverUrl);
   const [retrying, setRetrying] = useState(false);
 
   // Fase 1: trova il server all'avvio
@@ -277,11 +279,16 @@ export default function AppNavigator() {
     );
   }
 
-  // Auth loading
-  if (isLoading) {
+  // Update check / auth loading
+  if (updating || isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' }}>
         <ActivityIndicator size="large" color="#2563EB" />
+        {updating && (
+          <Text style={{ marginTop: 16, fontSize: 14, color: '#6B7280' }}>
+            Scaricamento aggiornamento...
+          </Text>
+        )}
       </View>
     );
   }

@@ -27,6 +27,7 @@ export const env = {
   ADMIN_PASSWORD: optional('ADMIN_PASSWORD', 'admin123'),
   GEMINI_API_KEY: optional('GEMINI_API_KEY', ''),
   BACKUP_API_KEY: optional('BACKUP_API_KEY', ''),
+  MIN_APP_VERSION: optional('MIN_APP_VERSION', '1.0.0'),
 } as const;
 
 export const isProd = env.NODE_ENV === 'production';

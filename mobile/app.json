@@ -44,6 +44,13 @@
         "projectId": "bb05cc14-9a34-4f9c-8671-55689ab0987c"
       }
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/bb05cc14-9a34-4f9c-8671-55689ab0987c",
+      "checkAutomatically": "ON_LOAD"
+    },
     "plugins": [
       [
         "expo-camera",

@@ -67,7 +67,12 @@ app.use('/api/backup', backupRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', app: 'gestione-magazzino', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    app: 'gestione-magazzino',
+    minAppVersion: env.MIN_APP_VERSION,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Error handler (deve essere l'ultimo middleware)
