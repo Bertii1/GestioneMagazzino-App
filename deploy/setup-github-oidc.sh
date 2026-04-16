@@ -92,19 +92,17 @@ DEPLOY_POLICY=$(cat <<EOF
     {
       "Sid": "SSMSendCommand",
       "Effect": "Allow",
-      "Action": [
-        "ssm:SendCommand",
-        "ssm:GetCommandInvocation"
-      ],
+      "Action": "ssm:SendCommand",
       "Resource": [
         "arn:aws:ssm:${REGION}::document/AWS-RunShellScript",
         "arn:aws:ec2:${REGION}:${ACCOUNT_ID}:instance/${EC2_INSTANCE_ID}"
       ]
     },
     {
-      "Sid": "SSMWaitCommand",
+      "Sid": "SSMReadResults",
       "Effect": "Allow",
       "Action": [
+        "ssm:GetCommandInvocation",
         "ssm:ListCommands",
         "ssm:ListCommandInvocations"
       ],
