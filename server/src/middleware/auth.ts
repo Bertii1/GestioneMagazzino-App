@@ -18,11 +18,16 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string };
+    const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string; tokenVersion: number };
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
       res.status(401).json({ message: 'Utente non trovato' });
+      return;
+    }
+
+    if (decoded.tokenVersion !== user.tokenVersion) {
+      res.status(401).json({ message: 'Sessione scaduta, effettua nuovamente il login' });
       return;
     }
 

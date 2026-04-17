@@ -6,7 +6,6 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
 import api from '../../services/api';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, Warehouse, Shelf, ProductCondition } from '../../types';
@@ -38,6 +37,7 @@ interface LookupResult {
   color?: string;
   description?: string;
   category?: string;
+  source?: string;
 }
 
 export default function ProductFormScreen({ route, navigation }: Props) {
@@ -64,12 +64,6 @@ export default function ProductFormScreen({ route, navigation }: Props) {
   // Riconoscimento AI da foto
   const [aiIdentifying, setAiIdentifying] = useState(false);
   const [aiPreviewUri, setAiPreviewUri] = useState<string | null>(null);
-
-  // Input vocale (Whisper)
-  const [voiceState, setVoiceState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
-  const [listeningField, setListeningField] = useState<string | null>(null);
-  const listeningFieldRef = useRef<string | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null);
 
   // Campi prodotto
   const [barcode, setBarcode] = useState(scannedBarcode ?? '');
@@ -136,72 +130,6 @@ export default function ProductFormScreen({ route, navigation }: Props) {
         .finally(() => setLoading(false));
     }
   }, [isEdit, productId]);
-
-  // ── Riconoscimento vocale (Whisper open-weight via server) ───────────────────
-  const applyTranscription = (text: string) => {
-    const field = listeningFieldRef.current;
-    if (field === 'name') setName(text);
-    else if (field === 'color') setColor(text);
-    else if (field === 'description') setDescription(prev => prev ? `${prev} ${text}` : text);
-    else if (field === 'slot') setSlot(text);
-  };
-
-  const startVoice = async (fieldName: string) => {
-    // Se sta già registrando → ferma e trascrive
-    if (voiceState === 'recording') {
-      await stopAndTranscribe();
-      return;
-    }
-    if (voiceState === 'transcribing') return;
-
-    try {
-      const { granted } = await Audio.requestPermissionsAsync();
-      if (!granted) {
-        Alert.alert('Permesso microfono', 'Concedi accesso al microfono nelle impostazioni.');
-        return;
-      }
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      recordingRef.current = recording;
-      listeningFieldRef.current = fieldName;
-      setListeningField(fieldName);
-      setVoiceState('recording');
-    } catch {
-      Alert.alert('Errore', 'Impossibile avviare la registrazione.');
-    }
-  };
-
-  const stopAndTranscribe = async () => {
-    const rec = recordingRef.current;
-    if (!rec) return;
-    setVoiceState('transcribing');
-    try {
-      await rec.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-      recordingRef.current = null;
-      const uri = rec.getURI();
-      if (!uri) throw new Error('URI non disponibile');
-
-      const ext = uri.split('.').pop() ?? 'm4a';
-      const formData = new FormData();
-      formData.append('audio', { uri, type: `audio/${ext}`, name: `rec.${ext}` } as unknown as Blob);
-
-      const { data } = await api.post<{ text: string }>('/transcribe', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60_000,
-      });
-      const text = data.text?.trim() ?? '';
-      if (text) applyTranscription(text);
-    } catch {
-      Alert.alert('Errore trascrizione', 'Impossibile trascrivere l\'audio. Verifica che il server sia raggiungibile.');
-    } finally {
-      listeningFieldRef.current = null;
-      setListeningField(null);
-      setVoiceState('idle');
-    }
-  };
 
   // ── Lookup barcode — chain: catalogo interno → UPC Item DB → Barcode Lookup → UPC Database ─────
   const tryInternalCatalog = async (code: string): Promise<LookupResult | null> => {
@@ -488,7 +416,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
@@ -619,10 +547,8 @@ export default function ProductFormScreen({ route, navigation }: Props) {
           <Image source={{ uri: aiPreviewUri }} style={styles.aiPreview} />
         )}
 
-        <Field label="Nome prodotto *" value={name} onChange={setName} placeholder="Nome del prodotto"
-          voiceField="name" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
-        <Field label="Colore / Finitura" value={color} onChange={setColor} placeholder="Es. Nero, Silver, Champagne"
-          voiceField="color" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
+        <Field label="Nome prodotto *" value={name} onChange={setName} placeholder="Nome del prodotto" />
+        <Field label="Colore / Finitura" value={color} onChange={setColor} placeholder="Es. Nero, Silver, Champagne" />
 
         {/* ── Marca ──────────────────────────────────────────────────── */}
         <Text style={styles.label}>Marca</Text>
@@ -750,8 +676,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
           )}
         </View>
 
-        <Field label="Descrizione" value={description} onChange={setDescription} placeholder="Opzionale" multiline
-          voiceField="description" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
+        <Field label="Descrizione" value={description} onChange={setDescription} placeholder="Opzionale" multiline />
         <Field label="Quantità" value={quantity} onChange={setQuantity} placeholder="1" keyboardType="numeric" />
 
         {/* ── Stato prodotto ──────────────────────────────────────────── */}
@@ -837,8 +762,7 @@ export default function ProductFormScreen({ route, navigation }: Props) {
           </>
         )}
 
-        <Field label="Slot / Posizione sul ripiano" value={slot} onChange={setSlot} placeholder="Es. L1, C2 (opzionale)"
-          voiceField="slot" listeningField={listeningField} voiceState={voiceState} onVoice={startVoice} />
+        <Field label="Slot / Posizione sul ripiano" value={slot} onChange={setSlot} placeholder="Es. L1, C2 (opzionale)" />
 
         {/* ── Foto prodotto (solo in modifica) ───────────────────────── */}
         {isEdit && (
@@ -846,12 +770,11 @@ export default function ProductFormScreen({ route, navigation }: Props) {
             <Text style={styles.label}>Foto prodotto</Text>
             <View style={styles.photoGrid}>
               {photos.map((filename) => (
-                <TouchableOpacity key={filename} onLongPress={() => handleRemovePhoto(filename)} style={styles.photoWrap}>
-                  <Image
-                    source={{ uri: `${getServerUrl()}/uploads/products/${filename}` }}
-                    style={styles.photoThumb}
-                  />
-                </TouchableOpacity>
+                <ProductPhoto
+                  key={filename}
+                  uri={`${getServerUrl()}/uploads/products/${filename}`}
+                  onLongPress={() => handleRemovePhoto(filename)}
+                />
               ))}
               {photos.length < 5 && (
                 <TouchableOpacity style={styles.addPhotoBox} onPress={showAddPhoto} disabled={uploadingPhoto}>
@@ -886,9 +809,35 @@ export default function ProductFormScreen({ route, navigation }: Props) {
   );
 }
 
+function ProductPhoto({ uri, onLongPress }: { uri: string; onLongPress: () => void }) {
+  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  return (
+    <TouchableOpacity onLongPress={onLongPress} style={styles.photoWrap}>
+      {status !== 'error' && (
+        <Image
+          source={{ uri }}
+          style={styles.photoThumb}
+          resizeMode="cover"
+          onLoad={() => setStatus('ok')}
+          onError={() => setStatus('error')}
+        />
+      )}
+      {status === 'loading' && (
+        <View style={styles.photoOverlay}>
+          <ActivityIndicator size="small" color="#2563EB" />
+        </View>
+      )}
+      {status === 'error' && (
+        <View style={[styles.photoThumb, styles.photoError]}>
+          <Ionicons name="image-outline" size={24} color="#D1D5DB" />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 function Field({
   label, value, onChange, placeholder, multiline, keyboardType,
-  voiceField, listeningField, voiceState, onVoice,
 }: {
   label: string;
   value: string;
@@ -896,46 +845,18 @@ function Field({
   placeholder?: string;
   multiline?: boolean;
   keyboardType?: 'default' | 'numeric' | 'email-address';
-  voiceField?: string;
-  listeningField?: string | null;
-  voiceState?: 'idle' | 'recording' | 'transcribing';
-  onVoice?: (field: string) => void;
 }) {
-  const isThisField = !!voiceField && listeningField === voiceField;
-  const isRecording = isThisField && voiceState === 'recording';
-  const isTranscribing = isThisField && voiceState === 'transcribing';
-  const isActive = isRecording || isTranscribing;
-  const isDisabled = !isThisField && voiceState !== 'idle';
-
   return (
     <>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.fieldRow}>
-        <TextInput
-          style={[styles.input, styles.fieldInput, multiline && styles.inputMultiline]}
-          value={value}
-          onChangeText={onChange}
-          placeholder={placeholder}
-          multiline={multiline}
-          keyboardType={keyboardType ?? 'default'}
-        />
-        {voiceField && onVoice && (
-          <TouchableOpacity
-            style={[styles.micBtn, isActive && styles.micBtnActive]}
-            onPress={() => onVoice(voiceField)}
-            disabled={isDisabled || isTranscribing}
-          >
-            {isTranscribing
-              ? <ActivityIndicator size="small" color="#DC2626" />
-              : <Ionicons
-                  name={isRecording ? 'stop-circle-outline' : 'mic-outline'}
-                  size={20}
-                  color={isActive ? '#DC2626' : isDisabled ? '#D1D5DB' : '#374151'}
-                />
-            }
-          </TouchableOpacity>
-        )}
-      </View>
+      <TextInput
+        style={[styles.input, multiline && styles.inputMultiline]}
+        value={value}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        multiline={multiline}
+        keyboardType={keyboardType ?? 'default'}
+      />
     </>
   );
 }
@@ -1066,16 +987,6 @@ const styles = StyleSheet.create({
   },
   scannerCloseText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 
-  // Field con microfono
-  fieldRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  fieldInput: { flex: 1 },
-  micBtn: {
-    backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#D1D5DB',
-    borderRadius: 8, paddingHorizontal: 11, paddingVertical: 11,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  micBtnActive: { backgroundColor: '#FEE2E2', borderColor: '#DC2626' },
-  micBtnText: { fontSize: 18 },
 
   // AI riconoscimento foto
   aiBtn: {
@@ -1095,6 +1006,13 @@ const styles = StyleSheet.create({
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   photoWrap: { borderRadius: 8, overflow: 'hidden' },
   photoThumb: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#E5E7EB' },
+  photoOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#E5E7EB', borderRadius: 8,
+  },
+  photoError: {
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6',
+  },
   addPhotoBox: {
     width: 80, height: 80, borderRadius: 8,
     borderWidth: 1.5, borderColor: '#D1D5DB', borderStyle: 'dashed',

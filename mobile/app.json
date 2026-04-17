@@ -28,6 +28,7 @@
         "backgroundColor": "#2563EB"
       },
       "package": "com.tuaazienda.gestionemagazzino",
+      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",

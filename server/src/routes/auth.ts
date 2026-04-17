@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, qrLogin, getQrToken, regenerateQrToken, changePassword } from '../controllers/authController';
+import { register, login, getMe, qrLogin, getQrToken, regenerateQrToken, changePassword, logout } from '../controllers/authController';
 import { protect, requireAdmin } from '../middleware/auth';
 
 const router = Router();
@@ -42,5 +42,6 @@ router.get('/me', protect, getMe);
 router.post('/qr-login', qrLogin);
 router.get('/qr-token', protect, getQrToken);
 router.post('/qr-token/regenerate', protect, regenerateQrToken);
+router.post('/logout', protect, logout);
 
 export default router;

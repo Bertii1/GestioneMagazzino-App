@@ -116,7 +116,7 @@ export type RootStackParamList = {
   ChangePassword: undefined;
   MainTabs: undefined;
   AdminPanel: undefined;
-  WarehouseMap: { warehouseId: string; warehouseName: string };
+  WarehouseMap: { warehouseId: string; warehouseName: string; highlightShelfId?: string };
   ShelfDetail: { shelfId: string; warehouseId: string; levelFocus?: number };
   ProductDetail: { productId: string };
   ProductForm: { productId?: string; shelfId?: string; warehouseId?: string; barcode?: string; level?: number };

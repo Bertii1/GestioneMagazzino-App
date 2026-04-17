@@ -9,6 +9,7 @@ export interface IUser extends Document {
   role: 'admin' | 'operator';
   mustChangePassword: boolean;
   loginToken: string;
+  tokenVersion: number;
   createdAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
 }
@@ -25,6 +26,7 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       default: () => crypto.randomBytes(32).toString('hex'),
     },
+    tokenVersion: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

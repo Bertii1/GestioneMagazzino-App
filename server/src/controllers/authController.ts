@@ -6,8 +6,8 @@ import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { env } from '../config/env';
 
-const signToken = (id: string): string =>
-  jwt.sign({ id }, env.JWT_SECRET, {
+const signToken = (id: string, tokenVersion: number): string =>
+  jwt.sign({ id, tokenVersion }, env.JWT_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN,
   } as jwt.SignOptions);
 
@@ -61,7 +61,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    const token = signToken(user.id as string);
+    const token = signToken(user.id as string, user.tokenVersion);
     res.json({
       token,
       user,
@@ -95,9 +95,11 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
 
     user.password = newPassword;
     user.mustChangePassword = false;
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
 
-    res.json({ message: 'Password aggiornata con successo' });
+    const newToken = signToken(user.id as string, user.tokenVersion);
+    res.json({ message: 'Password aggiornata con successo', token: newToken });
   } catch (err) {
     next(err);
   }
@@ -123,7 +125,7 @@ export const qrLogin = async (req: Request, res: Response, next: NextFunction): 
       res.status(401).json({ message: 'QR code non valido o scaduto' });
       return;
     }
-    const jwtToken = signToken(user.id as string);
+    const jwtToken = signToken(user.id as string, user.tokenVersion);
     res.json({
       token: jwtToken,
       user,
@@ -148,6 +150,15 @@ export const regenerateQrToken = async (req: AuthRequest, res: Response, next: N
     const newToken = crypto.randomBytes(32).toString('hex');
     await User.findByIdAndUpdate(req.user!._id, { loginToken: newToken });
     res.json({ loginToken: newToken });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const logout = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    await User.findByIdAndUpdate(req.user!._id, { $inc: { tokenVersion: 1 } });
+    res.json({ message: 'Logout effettuato con successo' });
   } catch (err) {
     next(err);
   }

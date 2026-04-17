@@ -32,15 +32,21 @@ export default function ShelfQRScreen({ route, navigation }: Props) {
 
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) {
-        Alert.alert('Condivisione non disponibile', 'Il tuo dispositivo non supporta la condivisione di file.');
+        Alert.alert('Condivisione non disponibile', 'Il tuo dispositivo non supporta la condivisione di file PDF.');
         return;
       }
       await Sharing.shareAsync(destPath, {
         mimeType: 'application/pdf',
         dialogTitle: `Barcode Scaffale ${shelfCode} · Ripiano ${level}`,
       });
-    } catch {
-      Alert.alert('Errore', 'Impossibile condividere il barcode');
+    } catch (err: unknown) {
+      const isCancel = (err as { message?: string })?.message?.toLowerCase().includes('cancel');
+      if (!isCancel) {
+        Alert.alert(
+          'Errore generazione PDF',
+          'Impossibile generare il PDF. Verifica che il dispositivo sia connesso a internet (necessario per i barcode).',
+        );
+      }
     } finally {
       setSharing(false);
     }
@@ -52,7 +58,7 @@ export default function ShelfQRScreen({ route, navigation }: Props) {
         <Barcode
           value={barcodeValue}
           format="CODE128"
-          singleBarWidth={1.5}
+          singleBarWidth={1.0}
           height={80}
           lineColor="#111827"
           backgroundColor="#FFFFFF"
@@ -106,8 +112,9 @@ function buildBarcodeHTML(value: string, shelfCode: string, level: number): stri
   .card {
     text-align: center; padding: 20px;
     border: 1px solid #e5e7eb; border-radius: 8px;
+    max-width: 200px;
   }
-  svg { display: block; margin: 0 auto; }
+  svg { display: block; margin: 0 auto; max-width: 100%; }
   .label { font-size: 13px; color: #6b7280; margin-top: 10px; }
 </style>
 </head>
@@ -116,11 +123,14 @@ function buildBarcodeHTML(value: string, shelfCode: string, level: number): stri
     <svg id="barcode"></svg>
     <p class="label">Scaffale ${shelfCode} · Ripiano ${level}</p>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"
+    onerror="document.body.innerHTML='<div style=\\'padding:24px;color:#dc2626;font-family:Arial;font-size:15px\\'>Errore: libreria barcode non disponibile. Verifica la connessione internet e riprova.</div>'"></script>
   <script>
-    JsBarcode('#barcode', ${JSON.stringify(value)}, {
-      format: 'CODE128', width: 2, height: 80, margin: 10, displayValue: false
-    });
+    if (typeof JsBarcode !== 'undefined') {
+      JsBarcode('#barcode', ${JSON.stringify(value)}, {
+        format: 'CODE128', width: 0.8, height: 40, margin: 6, displayValue: false
+      });
+    }
   </script>
 </body>
 </html>`;

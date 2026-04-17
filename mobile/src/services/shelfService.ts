@@ -1,9 +1,11 @@
-import api from './api';
-import { Shelf, CreateShelfDto } from '../types';
+import api from "./api";
+import { Shelf, CreateShelfDto } from "../types";
 
 export const shelfService = {
   async getByWarehouse(warehouseId: string): Promise<Shelf[]> {
-    const { data } = await api.get<Shelf[]>(`/warehouses/${warehouseId}/shelves`);
+    const { data } = await api.get<Shelf[]>(
+      `/warehouses/${warehouseId}/shelves`,
+    );
     return data;
   },
 
@@ -13,7 +15,10 @@ export const shelfService = {
   },
 
   async create(warehouseId: string, dto: CreateShelfDto): Promise<Shelf> {
-    const { data } = await api.post<Shelf>(`/warehouses/${warehouseId}/shelves`, dto);
+    const { data } = await api.post<Shelf>(
+      `/warehouses/${warehouseId}/shelves`,
+      dto,
+    );
     return data;
   },
 

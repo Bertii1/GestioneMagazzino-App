@@ -12,7 +12,6 @@ import authRoutes from './routes/auth';
 import warehouseRoutes from './routes/warehouses';
 import shelfRoutes from './routes/shelves';
 import productRoutes from './routes/products';
-import transcribeRoutes from './routes/transcribe';
 import visionRoutes from './routes/vision';
 import userRoutes from './routes/users';
 import backupRoutes from './routes/backup';
@@ -52,15 +51,18 @@ const authLimiter = rateLimit({
 
 app.use(express.json({ limit: '10mb' }));
 
-// File statici — foto prodotti
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// File statici — foto prodotti (cache 7 giorni)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true,
+}));
 
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/shelves', shelfRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/transcribe', transcribeRoutes);
 app.use('/api/vision', visionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/backup', backupRoutes);

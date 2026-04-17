@@ -19,7 +19,7 @@ const cellCode = (x: number, y: number): string =>
   `${String.fromCharCode(65 + x)}${y + 1}`;
 
 export default function WarehouseMapScreen({ route, navigation }: Props) {
-  const { warehouseId } = route.params;
+  const { warehouseId, highlightShelfId } = route.params;
 
   const [warehouse, setWarehouse] = useState<Warehouse | null>(null);
   const [shelves, setShelves] = useState<Shelf[]>([]);
@@ -44,12 +44,16 @@ export default function WarehouseMapScreen({ route, navigation }: Props) {
       ]);
       setWarehouse(wh);
       setShelves(sh);
+      if (highlightShelfId) {
+        const target = sh.find((s) => s._id === highlightShelfId);
+        if (target) setSelectedShelf(target);
+      }
     } catch {
       Alert.alert('Errore', 'Impossibile caricare la mappa');
     } finally {
       setLoading(false);
     }
-  }, [warehouseId]);
+  }, [warehouseId, highlightShelfId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -218,7 +222,7 @@ export default function WarehouseMapScreen({ route, navigation }: Props) {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>

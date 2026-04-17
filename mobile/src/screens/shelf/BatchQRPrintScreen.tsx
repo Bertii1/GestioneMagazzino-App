@@ -77,9 +77,14 @@ export default function BatchQRPrintScreen({ route }: Props) {
       }));
       const html = buildHTML(cards);
       await Print.printAsync({ html });
-    } catch (err) {
-      Alert.alert('Errore', 'Impossibile generare la stampa');
-      console.error(err);
+    } catch (err: unknown) {
+      const isCancel = (err as { message?: string })?.message?.toLowerCase().includes('cancel');
+      if (!isCancel) {
+        Alert.alert(
+          'Errore di stampa',
+          'Impossibile avviare la stampa. Verifica che una stampante sia disponibile e che il dispositivo sia connesso a internet (necessario per i barcode).',
+        );
+      }
     } finally {
       setPrinting(false);
     }
@@ -147,22 +152,34 @@ export default function BatchQRPrintScreen({ route }: Props) {
   );
 }
 
+const CARDS_PER_PAGE = 24; // 8 righe × 3 colonne
+
 function buildHTML(
   cards: Array<{ shelfCode: string; shelfName?: string; level: number; value: string }>
 ): string {
   const barcodeInits = cards
-    .map((c, i) => `JsBarcode('#bc${i}', ${JSON.stringify(c.value)}, {format:'CODE128',width:1.8,height:60,margin:6,displayValue:false});`)
+    .map((c, i) => `JsBarcode('#bc${i}', ${JSON.stringify(c.value)}, {format:'CODE128',width:0.8,height:40,margin:6,displayValue:false});`)
     .join('\n    ');
 
-  const cardsHTML = cards
-    .map(
-      (c, i) => `
-    <div class="card">
-      <svg id="bc${i}"></svg>
-      <p class="label">Scaffale ${c.shelfCode} · Ripiano ${c.level}</p>
-    </div>`
-    )
-    .join('');
+  // Raggruppa card in pagine da CARDS_PER_PAGE
+  const pages: string[] = [];
+  for (let p = 0; p < cards.length; p += CARDS_PER_PAGE) {
+    const pageCards = cards.slice(p, p + CARDS_PER_PAGE);
+    const cardsHTML = pageCards
+      .map(
+        (c, j) => {
+          const i = p + j;
+          return `
+      <div class="card">
+        <svg id="bc${i}"></svg>
+        <p class="label">Scaffale ${c.shelfCode} · Ripiano ${c.level}</p>
+      </div>`;
+        }
+      )
+      .join('');
+    const isLast = p + CARDS_PER_PAGE >= cards.length;
+    pages.push(`<div class="page${isLast ? '' : ' page-break'}">\n  <div class="grid">${cardsHTML}\n  </div>\n</div>`);
+  }
 
   return `<!DOCTYPE html>
 <html>
@@ -170,22 +187,26 @@ function buildHTML(
 <meta charset="utf-8">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; background: white; padding: 12px; }
+  body { font-family: Arial, sans-serif; background: white; }
+  .page { padding: 12px; }
+  .page-break { page-break-after: always; }
   .grid { display: flex; flex-wrap: wrap; gap: 12px; }
   .card {
     text-align: center; padding: 10px;
     border: 1px solid #e5e7eb; border-radius: 8px;
-    break-inside: avoid; page-break-inside: avoid;
+    width: calc(33.33% - 8px);
   }
-  svg { display: block; margin: 0 auto; }
+  svg { display: block; margin: 0 auto; max-width: 100%; }
   .label { font-size: 11px; color: #6b7280; margin-top: 6px; }
 </style>
 </head>
 <body>
-  <div class="grid">${cardsHTML}</div>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  ${pages.join('\n  ')}
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"
+    onerror="document.body.innerHTML='<div style=\\'padding:24px;color:#dc2626;font-family:Arial;font-size:15px\\'>Errore: libreria barcode non disponibile. Verifica la connessione internet e riprova.</div>'"></script>
   <script>
     window.onload = function() {
+      if (typeof JsBarcode === 'undefined') return;
       ${barcodeInits}
     };
   </script>

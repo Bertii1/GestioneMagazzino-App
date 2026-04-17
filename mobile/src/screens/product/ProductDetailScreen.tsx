@@ -150,6 +150,21 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           <Row label="Ripiano" value={String(product.level)} />
           {product.slot && <Row label="Slot" value={product.slot} />}
         </View>
+        {warehouse && typeof shelf === 'object' && (
+          <TouchableOpacity
+            style={styles.findBtn}
+            onPress={() =>
+              navigation.navigate('WarehouseMap', {
+                warehouseId: warehouse._id,
+                warehouseName: warehouse.name,
+                highlightShelfId: shelf._id,
+              })
+            }
+          >
+            <Ionicons name="map-outline" size={16} color="#2563EB" />
+            <Text style={styles.findBtnText}>Trova sulla mappa</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Dettagli */}
@@ -222,6 +237,13 @@ const styles = StyleSheet.create({
   },
   addPhotoText: { fontSize: 11, color: '#9CA3AF', marginTop: 4 },
   photoHint: { fontSize: 11, color: '#9CA3AF', marginTop: 6 },
+  findBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 10, alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE',
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  findBtnText: { fontSize: 13, fontWeight: '600', color: '#2563EB' },
   actions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   editBtn: { flex: 1, backgroundColor: '#2563EB', borderRadius: 8, padding: 14, alignItems: 'center' },
   editBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
