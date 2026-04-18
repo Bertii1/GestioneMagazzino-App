@@ -13,11 +13,12 @@ import { RootStackParamList } from '../../types';
 type Props = NativeStackScreenProps<RootStackParamList, 'ShelfQR'>;
 
 /** Prefisso schema URL per gli scaffali di questa app */
-export const SHELF_QR_PREFIX = 'magazzino://shelf/';
+export const SHELF_QR_PREFIX = 'S/';
+export const SHELF_QR_PREFIX_LEGACY = 'magazzino://shelf/';
 
 export default function ShelfQRScreen({ route, navigation }: Props) {
   const { shelfId, shelfCode, warehouseId, level } = route.params;
-  const barcodeValue = `${SHELF_QR_PREFIX}${shelfId}/level/${level}`;
+  const barcodeValue = `${SHELF_QR_PREFIX}${shelfId}:${level}`;
   const [sharing, setSharing] = useState(false);
 
   const handleShare = async () => {
@@ -57,9 +58,7 @@ export default function ShelfQRScreen({ route, navigation }: Props) {
       <View style={styles.barcodeWrapper}>
         <Barcode
           value={barcodeValue}
-          format="CODE128"
-          singleBarWidth={1.0}
-          height={80}
+          format="QR"
           lineColor="#111827"
           backgroundColor="#FFFFFF"
         />
@@ -110,28 +109,24 @@ function buildBarcodeHTML(value: string, shelfCode: string, level: number): stri
     min-height: 100vh; background: white;
   }
   .card {
-    text-align: center; padding: 20px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
     border: 1px solid #e5e7eb; border-radius: 8px;
-    max-width: 200px;
   }
-  svg { display: block; margin: 0 auto; max-width: 100%; }
-  .label { font-size: 13px; color: #6b7280; margin-top: 10px; }
+  canvas { display: block; flex-shrink: 0; }
+  .info { display: flex; flex-direction: column; gap: 4px; }
+  .code { font-size: 16px; font-weight: 700; color: #111827; }
+  .lvl { font-size: 13px; color: #6b7280; }
 </style>
 </head>
 <body>
   <div class="card">
-    <svg id="barcode"></svg>
-    <p class="label">Scaffale ${shelfCode} · Ripiano ${level}</p>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(value)}&size=96x96&margin=1&color=111827&bgcolor=ffffff" width="96" height="96" />
+    <div class="info">
+      <span class="code">Scaffale ${shelfCode}</span>
+      <span class="lvl">Ripiano ${level}</span>
+    </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"
-    onerror="document.body.innerHTML='<div style=\\'padding:24px;color:#dc2626;font-family:Arial;font-size:15px\\'>Errore: libreria barcode non disponibile. Verifica la connessione internet e riprova.</div>'"></script>
-  <script>
-    if (typeof JsBarcode !== 'undefined') {
-      JsBarcode('#barcode', ${JSON.stringify(value)}, {
-        format: 'CODE128', width: 0.8, height: 40, margin: 6, displayValue: false
-      });
-    }
-  </script>
 </body>
 </html>`;
 }

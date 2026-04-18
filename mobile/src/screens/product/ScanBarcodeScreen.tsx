@@ -5,7 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import { productService } from '../../services/productService';
 import { shelfService } from '../../services/shelfService';
-import { SHELF_QR_PREFIX } from '../shelf/ShelfQRScreen';
+import { SHELF_QR_PREFIX, SHELF_QR_PREFIX_LEGACY } from '../shelf/ShelfQRScreen';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ScanBarcode'>;
 
@@ -45,12 +45,16 @@ export default function ScanBarcodeScreen({ navigation }: Props) {
     setChecking(true);
 
     // ── QR Ripiano ───────────────────────────────────────────────────────────
-    if (data.startsWith(SHELF_QR_PREFIX)) {
-      const rest = data.slice(SHELF_QR_PREFIX.length);
-      // Nuovo formato: {shelfId}/level/{n}   (vecchio fallback: solo {shelfId})
-      const levelMatch = rest.match(/^(.+)\/level\/(\d+)$/);
-      const shelfId = levelMatch ? levelMatch[1] : rest;
-      const level = levelMatch ? parseInt(levelMatch[2], 10) : undefined;
+    const isShelf = data.startsWith(SHELF_QR_PREFIX) || data.startsWith(SHELF_QR_PREFIX_LEGACY);
+    if (isShelf) {
+      const prefix = data.startsWith(SHELF_QR_PREFIX) ? SHELF_QR_PREFIX : SHELF_QR_PREFIX_LEGACY;
+      const rest = data.slice(prefix.length);
+      // Formato nuovo: {shelfId}:{n} — legacy: {shelfId}/level/{n} — fallback: solo {shelfId}
+      const newMatch = rest.match(/^(.+):(\d+)$/);
+      const legacyMatch = rest.match(/^(.+)\/level\/(\d+)$/);
+      const match = newMatch ?? legacyMatch;
+      const shelfId = match ? match[1] : rest;
+      const level = match ? parseInt(match[2], 10) : undefined;
 
       setStatusText('Apertura ripiano...');
       try {
