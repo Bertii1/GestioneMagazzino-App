@@ -29,6 +29,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: mobile
@@ -36,6 +38,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -57,12 +61,17 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Bump version
-        if: inputs.bump && inputs.bump != 'none'
+        id: bump
         run: |
           CURRENT=$(node -e "console.log(require('./app.json').expo.version)")
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
-          case "${{ inputs.bump }}" in
+          BUMP_TYPE="${{ inputs.bump }}"
+          if [ -z "$BUMP_TYPE" ] || [ "$BUMP_TYPE" = "none" ]; then
+            BUMP_TYPE="patch"
+          fi
+
+          case "$BUMP_TYPE" in
             patch) PATCH=$((PATCH + 1)) ;;
             minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
             major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
@@ -82,6 +91,15 @@ jobs:
 
           npm version "$NEW_VERSION" --no-git-tag-version --silent
           echo "Bumped: $CURRENT → $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app.json package.json package-lock.json
+          git commit -m "chore(mobile): bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git push
 
       - name: Determine platform
         id: platform
