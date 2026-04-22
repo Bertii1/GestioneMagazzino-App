@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator,
   Alert, ScrollView, TouchableOpacity, Image, Dimensions,
+  Modal, FlatList, StatusBar, SafeAreaView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -13,13 +14,16 @@ import { getServerUrl } from '../../services/api';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductDetail'>;
 
-const PHOTO_SIZE = (Dimensions.get('window').width - 48) / 3;
+const SCREEN_W = Dimensions.get('window').width;
+const PHOTO_SIZE = (SCREEN_W - 48) / 3;
 
 export default function ProductDetailScreen({ route, navigation }: Props) {
   const { productId } = route.params;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const lightboxRef = useRef<FlatList>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -99,6 +103,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const warehouse = product.warehouseId as Warehouse;
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
@@ -118,8 +123,13 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Foto</Text>
         <View style={styles.photoGrid}>
-          {(product.photos ?? []).map((filename) => (
-            <TouchableOpacity key={filename} onLongPress={() => handleDeletePhoto(filename)} style={styles.photoWrap}>
+          {(product.photos ?? []).map((filename, idx) => (
+            <TouchableOpacity
+              key={filename}
+              onPress={() => setLightboxIndex(idx)}
+              onLongPress={() => handleDeletePhoto(filename)}
+              style={styles.photoWrap}
+            >
               <Image
                 source={{ uri: `${getServerUrl()}/uploads/products/${filename}` }}
                 style={styles.photoThumb}
@@ -193,6 +203,51 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         </TouchableOpacity>
       </View>
     </ScrollView>
+
+    {/* Lightbox */}
+    {lightboxIndex !== null && (
+      <Modal visible transparent animationType="fade" onRequestClose={() => setLightboxIndex(null)}>
+        <StatusBar hidden />
+        <SafeAreaView style={styles.lightboxContainer}>
+          <FlatList
+            ref={lightboxRef}
+            data={product.photos}
+            keyExtractor={(f) => f}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={lightboxIndex}
+            getItemLayout={(_, index) => ({ length: SCREEN_W, offset: SCREEN_W * index, index })}
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+              setLightboxIndex(idx);
+            }}
+            renderItem={({ item: filename }) => (
+              <View style={styles.lightboxSlide}>
+                <Image
+                  source={{ uri: `${getServerUrl()}/uploads/products/${filename}` }}
+                  style={styles.lightboxImage}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          />
+          {/* Dots */}
+          {product.photos.length > 1 && (
+            <View style={styles.dotsRow}>
+              {product.photos.map((_, i) => (
+                <View key={i} style={[styles.dot, i === lightboxIndex && styles.dotActive]} />
+              ))}
+            </View>
+          )}
+          {/* Chiudi */}
+          <TouchableOpacity style={styles.lightboxClose} onPress={() => setLightboxIndex(null)}>
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+        </SafeAreaView>
+      </Modal>
+    )}
+    </>
   );
 }
 
@@ -249,4 +304,14 @@ const styles = StyleSheet.create({
   editBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   deleteBtn: { flex: 1, backgroundColor: '#FEE2E2', borderRadius: 8, padding: 14, alignItems: 'center' },
   deleteBtnText: { color: '#DC2626', fontWeight: '600', fontSize: 15 },
+  lightboxContainer: { flex: 1, backgroundColor: '#000' },
+  lightboxSlide: { width: SCREEN_W, flex: 1, justifyContent: 'center', alignItems: 'center' },
+  lightboxImage: { width: SCREEN_W, height: '100%' },
+  lightboxClose: {
+    position: 'absolute', top: 48, right: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, padding: 6,
+  },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: 24 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.4)' },
+  dotActive: { backgroundColor: '#fff' },
 });
