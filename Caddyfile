@@ -3,7 +3,29 @@
 # Caddy gestisce automaticamente HTTPS via Let's Encrypt
 
 {$DOMAIN:localhost} {
-	reverse_proxy server:3000
+	# Blocca /metrics dall'esterno (Prometheus scrape via rete Docker interna)
+	handle /metrics {
+		respond 403
+	}
+
+	# Grafana — dashboard con auth propria
+	handle /grafana* {
+		reverse_proxy grafana:3000
+	}
+
+	# Prometheus UI — basic auth obbligatoria (MONITORING_USER + MONITORING_HASH da .env)
+	# Genera hash: docker run caddy caddy hash-password --plaintext LA_TUA_PASSWORD
+	handle /prometheus* {
+		basicauth {
+			{$MONITORING_USER:-admin} {$MONITORING_HASH}
+		}
+		reverse_proxy prometheus:9090
+	}
+
+	# API principale
+	handle {
+		reverse_proxy server:3000
+	}
 
 	# Logging
 	log {

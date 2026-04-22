@@ -7,6 +7,8 @@ services:
     restart: unless-stopped
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+      MONITORING_USER: ${MONITORING_USER:-admin}
+      MONITORING_HASH: ${MONITORING_HASH:?Imposta MONITORING_HASH nel file .env (usa: docker run caddy caddy hash-password --plaintext PASSWORD)}
     ports:
       - "80:80"
       - "443:443"
@@ -65,6 +67,76 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # ─── Monitoring: Prometheus ─────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.53.1
+    container_name: magazzino_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.external-url=https://${DOMAIN}/prometheus'
+      - '--web.route-prefix=/prometheus'
+    depends_on:
+      server:
+        condition: service_healthy
+    profiles:
+      - monitoring
+
+  # ─── Monitoring: Loki (log aggregation) ────────────────────────────────────
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: magazzino_loki
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/config.yml
+    profiles:
+      - monitoring
+
+  # ─── Monitoring: Promtail (log shipper) ────────────────────────────────────
+  promtail:
+    image: grafana/promtail:3.1.0
+    container_name: magazzino_promtail
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    profiles:
+      - monitoring
+
+  # ─── Monitoring: Grafana (dashboard) ────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: magazzino_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?Imposta GRAFANA_PASSWORD nel file .env}
+      GF_SERVER_ROOT_URL: https://${DOMAIN}/grafana
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+      - loki
+    profiles:
+      - monitoring
 
   # ─── Whisper ASR (open-weight, locale) ─────────────────────────────────────
   whisper-asr:
@@ -128,3 +200,9 @@ volumes:
     name: magazzino_caddy_data
   caddy_config:
     name: magazzino_caddy_config
+  prometheus_data:
+    name: magazzino_prometheus_data
+  loki_data:
+    name: magazzino_loki_data
+  grafana_data:
+    name: magazzino_grafana_data

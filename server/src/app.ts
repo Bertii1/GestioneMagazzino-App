@@ -17,6 +17,8 @@ import userRoutes from './routes/users';
 import backupRoutes from './routes/backup';
 import versionRoutes from './routes/version';
 import { errorHandler } from './middleware/errorHandler';
+import { metricsMiddleware } from './middleware/metricsMiddleware';
+import metricsRoutes from './routes/metrics';
 
 const app = express();
 
@@ -51,6 +53,7 @@ const authLimiter = rateLimit({
 });
 
 app.use(express.json({ limit: '10mb' }));
+app.use(metricsMiddleware);
 
 // File statici — foto prodotti (cache 7 giorni)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
@@ -68,6 +71,9 @@ app.use('/api/vision', visionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/version', versionRoutes);
+
+// Metrics — solo rete interna Docker, bloccato da Caddy esternamente
+app.use('/metrics', metricsRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {
