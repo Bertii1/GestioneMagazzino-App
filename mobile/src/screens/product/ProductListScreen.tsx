@@ -101,9 +101,9 @@ export default function ProductListScreen({ navigation }: Props) {
                     </Text>
                   </View>
                 )}
-                {item.color ? (
-                  <View style={styles.colorTag}>
-                    <Text style={styles.colorTagText}>{item.color}</Text>
+                {item.brand ? (
+                  <View style={styles.brandTag}>
+                    <Text style={styles.brandTagText}>{item.brand}</Text>
                   </View>
                 ) : null}
                 <Text style={styles.cardPosition}>
@@ -124,7 +124,7 @@ export default function ProductListScreen({ navigation }: Props) {
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Cerca nome o barcode..."
+          placeholder="Cerca nome, marca o barcode..."
           value={search}
           onChangeText={setSearch}
           onSubmitEditing={handleSearch}
@@ -198,11 +198,11 @@ const styles = StyleSheet.create({
   conditionTagTextNuovo: { color: '#16A34A' },
   conditionTagTextUsato: { color: '#D97706' },
   conditionTagTextVuoto: { color: '#DC2626' },
-  colorTag: {
+  brandTag: {
     borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
     backgroundColor: '#DBEAFE',
   },
-  colorTagText: { fontSize: 10, fontWeight: '700', color: '#1D4ED8' },
+  brandTagText: { fontSize: 10, fontWeight: '700', color: '#1D4ED8' },
   cardPosition: { fontSize: 12, color: '#6B7280' },
   empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 60, fontSize: 16 },
   fab: {

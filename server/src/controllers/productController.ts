@@ -51,7 +51,10 @@ export const getProducts = async (req: AuthRequest, res: Response, next: NextFun
 
     if (warehouseId) filter.warehouseId = warehouseId;
     if (shelfId) filter.shelfId = shelfId;
-    if (q) filter.$text = { $search: q as string };
+    if (q) {
+      const regex = { $regex: q as string, $options: 'i' };
+      filter.$or = [{ name: regex }, { brand: regex }, { description: regex }, { category: regex }];
+    }
 
     const products = await Product.find(filter)
       .populate('shelfId', 'code name x y')
