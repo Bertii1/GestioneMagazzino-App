@@ -2,8 +2,11 @@
 set -euo pipefail
 
 # ─── Configurazione ──────────────────────────────────────────────────────────
-SERVER_URL="https://YOUR_SERVER_URL"
-BACKUP_API_KEY="REDACTED_BACKUP_API_KEY"
+# Imposta le variabili d'ambiente prima di eseguire:
+#   export SERVER_URL="https://yourserver.nip.io"
+#   export BACKUP_API_KEY="your_backup_api_key"
+SERVER_URL="${SERVER_URL:?Imposta SERVER_URL (es. https://yourserver.nip.io)}"
+BACKUP_API_KEY="${BACKUP_API_KEY:?Imposta BACKUP_API_KEY}"
 BACKUP_DIR="$HOME/magazzino-backups"
 RETENTION_DAYS=30
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)

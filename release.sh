@@ -22,10 +22,14 @@ usage() {
   echo -e "${BOLD}Uso:${NC} ./release.sh [opzioni]"
   echo ""
   echo -e "${BOLD}Piattaforme:${NC}"
-  echo "  --android       Build APK Android (installazione diretta)"
-  echo "  --ios           Build IPA iOS (installazione diretta)"
-  echo "  --all           Build entrambe (default)"
+  echo "  --android       Build APK Android (default)"
+  echo "  --ios           Build IPA iOS"
+  echo "  --all           Build entrambe"
   echo "  --simulator     Build iOS per simulatore (Mac)"
+  echo ""
+  echo -e "${BOLD}Modalità:${NC}"
+  echo "  --local         Build locale (solo Android, richiede SDK)"
+  echo "  --cloud         Build su server Expo (default)"
   echo ""
   echo -e "${BOLD}Versione:${NC}"
   echo "  --bump-patch    1.0.0 → 1.0.1"
@@ -33,15 +37,16 @@ usage() {
   echo "  --bump-major    1.0.0 → 2.0.0"
   echo ""
   echo -e "${BOLD}Esempi:${NC}"
-  echo "  ./release.sh --android"
+  echo "  ./release.sh --android --local"
   echo "  ./release.sh --all --bump-patch"
   echo "  ./release.sh --simulator"
 }
 
 # ─── Defaults ────────────────────────────────────────────────────────────────
-PLATFORM="all"
+PLATFORM="android"
 BUMP=""
 SIMULATOR=false
+LOCAL=false
 
 for arg in "$@"; do
   case "$arg" in
@@ -49,6 +54,8 @@ for arg in "$@"; do
     --ios)        PLATFORM="ios" ;;
     --all)        PLATFORM="all" ;;
     --simulator)  PLATFORM="ios"; SIMULATOR=true ;;
+    --local)      LOCAL=true ;;
+    --cloud)      LOCAL=false ;;
     --bump-patch) BUMP="patch" ;;
     --bump-minor) BUMP="minor" ;;
     --bump-major) BUMP="major" ;;
@@ -69,11 +76,16 @@ fi
 
 info "Node: $(node --version) — EAS CLI: $(eas --version)"
 
-if ! eas whoami &>/dev/null; then
-  warn "Non autenticato su EAS. Avvio login..."
-  eas login
+if $LOCAL; then
+  command -v java &>/dev/null || error "Java non trovato (richiesto per build locale)"
+  [ -n "${ANDROID_HOME:-}" ] || warn "ANDROID_HOME non impostata. La build locale potrebbe fallire."
+else
+  if ! eas whoami &>/dev/null; then
+    warn "Non autenticato su EAS. Avvio login..."
+    eas login
+  fi
+  info "EAS account: $(eas whoami)"
 fi
-info "EAS account: $(eas whoami)"
 
 # ─── Bump versione ────────────────────────────────────────────────────────────
 if [ -n "$BUMP" ]; then
@@ -111,6 +123,7 @@ echo ""
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "  Versione   : ${BOLD}${VERSION}${NC}"
 echo -e "  Piattaforma: ${BOLD}${PLATFORM}${NC}"
+$LOCAL && echo -e "  Metodo     : ${BOLD}Locale${NC}" || echo -e "  Metodo     : ${BOLD}Cloud (EAS)${NC}"
 $SIMULATOR && echo -e "  Target     : ${BOLD}Simulatore iOS${NC}"
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
@@ -127,14 +140,22 @@ step "Build"
 cd "$MOBILE_DIR"
 
 build_android() {
-  info "Building Android APK..."
-  eas build --platform android --profile preview --non-interactive
+  if $LOCAL; then
+    info "Building Android APK locally..."
+    eas build --platform android --profile preview --local --non-interactive
+  else
+    info "Building Android APK on cloud..."
+    eas build --platform android --profile preview --non-interactive
+  fi
 }
 
 build_ios() {
   local profile="preview"
   $SIMULATOR && profile="simulator"
-  info "Building iOS ($profile)..."
+  if $LOCAL; then
+    error "Build locale iOS non supportata in questo script. Usa cloud."
+  fi
+  info "Building iOS ($profile) on cloud..."
   eas build --platform ios --profile "$profile" --non-interactive
 }
 
@@ -155,8 +176,14 @@ esac
 echo ""
 echo -e "${GREEN}${BOLD}✓ Build completata — v${VERSION}${NC}"
 echo ""
-echo -e "  Scarica i file da:"
-echo -e "  ${BOLD}https://expo.dev/accounts/[account]/projects/gestione-magazzino/builds${NC}"
+
+if $LOCAL; then
+  echo -e "  File generato localmente."
+  echo -e "  Cerca il file APK nella cartella ${BOLD}mobile/${NC}"
+else
+  echo -e "  Scarica i file da:"
+  echo -e "  ${BOLD}https://expo.dev/accounts/[account]/projects/gestione-magazzino/builds${NC}"
+fi
 echo ""
 
 if [ "$PLATFORM" = "android" ] || [ "$PLATFORM" = "all" ]; then

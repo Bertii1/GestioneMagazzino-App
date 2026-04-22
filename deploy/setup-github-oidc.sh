@@ -17,7 +17,7 @@ GITHUB_ORG="Bertii1"
 GITHUB_REPO="GestioneMagazzino-App"
 ROLE_NAME="GitHubActions-Deploy-Magazzino"
 POLICY_NAME="GitHubActions-Deploy-Magazzino-Policy"
-EC2_INSTANCE_ID="YOUR_EC2_INSTANCE_ID"
+EC2_INSTANCE_ID="${EC2_INSTANCE_ID:?Imposta EC2_INSTANCE_ID (es. i-0123456789abcdef0)}"
 OIDC_PROVIDER="token.actions.githubusercontent.com"
 
 echo "=== GitHub OIDC → AWS IAM setup ==="

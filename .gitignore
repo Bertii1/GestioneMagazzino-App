@@ -5,6 +5,7 @@
 node_modules/
 mobile/node_modules/
 server/node_modules/
+.expo/
 
 # Build / cache
 mobile/.expo/
@@ -19,3 +20,7 @@ npm-debug.log*
 # Sistema
 .DS_Store
 Thumbs.db
+
+#claude
+CLAUDE.original.md
+New_Features.MD

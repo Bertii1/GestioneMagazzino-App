@@ -133,7 +133,7 @@ if builds:
 
           VERSION=$(node -e "console.log(require('./app.json').expo.version)")
           BUILD_NUM=$(node -e "console.log(require('./app.json').expo.android?.versionCode ?? 1)")
-          API_URL="https://YOUR_SERVER_URL"
+          API_URL="${{ secrets.SERVER_URL }}"
 
           if [ -z "$APK_URL" ]; then
             echo "APK URL not found, skipping version update"

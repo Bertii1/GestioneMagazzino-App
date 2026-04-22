@@ -163,7 +163,7 @@ function ServerSetupScreen({
           style={ss.input}
           value={host}
           onChangeText={v => setHost(v.replace(/,/g, '.'))}
-          placeholder={useHttps ? 'Es. YOUR_SERVER_URL' : 'Es. 192.168.0.240'}
+          placeholder={useHttps ? 'Es. yourserver.nip.io' : 'Es. 192.168.0.240'}
           keyboardType="url"
           autoCapitalize="none"
           autoCorrect={false}
