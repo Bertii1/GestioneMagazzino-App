@@ -5,10 +5,10 @@ services:
     image: caddy:2-alpine
     container_name: magazzino_caddy
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       DOMAIN: ${DOMAIN:-localhost}
-      MONITORING_USER: ${MONITORING_USER:-admin}
-      MONITORING_HASH: ${MONITORING_HASH:?Imposta MONITORING_HASH nel file .env (usa: docker run caddy caddy hash-password --plaintext PASSWORD)}
     ports:
       - "80:80"
       - "443:443"
