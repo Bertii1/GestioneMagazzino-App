@@ -100,8 +100,37 @@ jobs:
         if: steps.platform.outputs.value == 'ios' || steps.platform.outputs.value == 'all'
         run: eas build --platform ios --profile preview --non-interactive
 
+      - name: Notify server of new Android version
+        if: (steps.platform.outputs.value == 'android' || steps.platform.outputs.value == 'all') && secrets.BACKUP_API_KEY != ''
+        env:
+          BACKUP_API_KEY: ${{ secrets.BACKUP_API_KEY }}
+        run: |
+          BUILD_INFO=$(eas build:list --platform android --status finished --limit 1 --json 2>/dev/null || echo "[]")
+          APK_URL=$(echo "$BUILD_INFO" | python3 -c "
+import sys, json
+builds = json.load(sys.stdin)
+if builds:
+    print(builds[0].get('artifacts', {}).get('buildUrl', ''))
+" 2>/dev/null || echo "")
+
+          VERSION=$(node -e "console.log(require('./app.json').expo.version)")
+          BUILD_NUM=$(node -e "console.log(require('./app.json').expo.android?.versionCode ?? 1)")
+          API_URL="https://YOUR_SERVER_URL"
+
+          if [ -z "$APK_URL" ]; then
+            echo "APK URL not found, skipping version update"
+            exit 0
+          fi
+
+          curl -sf -X PUT "$API_URL/api/version" \
+            -H "Authorization: Bearer $BACKUP_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"platform\":\"android\",\"version\":\"$VERSION\",\"buildNumber\":$BUILD_NUM,\"downloadUrl\":\"$APK_URL\",\"minVersion\":\"$VERSION\"}" \
+            && echo "Server updated: v$VERSION" \
+            || echo "Warning: server version update failed (non-fatal)"
+
       - name: Print build URLs
         if: always()
         run: |
-          echo "📱 Check builds at:"
+          echo "Check builds at:"
           echo "https://expo.dev/accounts/3n3rgy07/projects/gestione-magazzino/builds"

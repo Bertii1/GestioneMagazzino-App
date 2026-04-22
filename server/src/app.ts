@@ -15,6 +15,7 @@ import productRoutes from './routes/products';
 import visionRoutes from './routes/vision';
 import userRoutes from './routes/users';
 import backupRoutes from './routes/backup';
+import versionRoutes from './routes/version';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -66,6 +67,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/vision', visionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/version', versionRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {
