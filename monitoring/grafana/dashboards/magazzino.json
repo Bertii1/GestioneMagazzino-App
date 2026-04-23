@@ -142,7 +142,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "magazzino_nodejs_heap_used_bytes",
+          "expr": "magazzino_nodejs_heap_size_used_bytes",
           "legendFormat": "heap used"
         }
       ]
@@ -215,12 +215,12 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "magazzino_nodejs_heap_used_bytes",
+          "expr": "magazzino_nodejs_heap_size_used_bytes",
           "legendFormat": "heap used"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus-ds" },
-          "expr": "magazzino_nodejs_heap_size_bytes",
+          "expr": "magazzino_nodejs_heap_size_total_bytes",
           "legendFormat": "heap total"
         },
         {
