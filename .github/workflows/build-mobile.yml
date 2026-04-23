@@ -125,11 +125,11 @@ jobs:
         run: |
           BUILD_INFO=$(eas build:list --platform android --status finished --limit 1 --json 2>/dev/null || echo "[]")
           APK_URL=$(echo "$BUILD_INFO" | python3 -c "
-import sys, json
-builds = json.load(sys.stdin)
-if builds:
-    print(builds[0].get('artifacts', {}).get('buildUrl', ''))
-" 2>/dev/null || echo "")
+          import sys, json
+          builds = json.load(sys.stdin)
+          if builds:
+              print(builds[0].get('artifacts', {}).get('buildUrl', ''))
+          " 2>/dev/null || echo "")
 
           VERSION=$(node -e "console.log(require('./app.json').expo.version)")
           BUILD_NUM=$(node -e "console.log(require('./app.json').expo.android?.versionCode ?? 1)")
