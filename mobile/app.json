@@ -2,7 +2,7 @@
   "expo": {
     "name": "Gestione Magazzino",
     "slug": "gestione-magazzino",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,8 @@
         "NSSpeechRecognitionUsageDescription": "Il riconoscimento vocale è necessario per dettare il nome e i dettagli del prodotto",
         "NSLocalNetworkUsageDescription": "L'app scansiona la rete locale per trovare automaticamente il server del magazzino",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -34,7 +35,8 @@
         "RECORD_AUDIO",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
