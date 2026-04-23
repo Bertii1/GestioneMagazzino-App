@@ -1,20 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Barcode from 'react-native-barcode-svg';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Barcode from "react-native-barcode-svg";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../types";
 
-type Props = NativeStackScreenProps<RootStackParamList, 'ShelfQR'>;
+type Props = NativeStackScreenProps<RootStackParamList, "ShelfQR">;
 
 /** Prefisso schema URL per gli scaffali di questa app */
-export const SHELF_QR_PREFIX = 'S/';
-export const SHELF_QR_PREFIX_LEGACY = 'magazzino://shelf/';
+export const SHELF_QR_PREFIX = "S/";
+export const SHELF_QR_PREFIX_LEGACY = "magazzino://shelf/";
 
 export default function ShelfQRScreen({ route, navigation }: Props) {
   const { shelfId, shelfCode, warehouseId, level } = route.params;
@@ -27,25 +32,30 @@ export default function ShelfQRScreen({ route, navigation }: Props) {
       const html = buildBarcodeHTML(barcodeValue, shelfCode, level);
       const { uri } = await Print.printToFileAsync({ html, base64: false });
 
-      const safeName = shelfCode.replace(/[^A-Z0-9]/gi, '_');
+      const safeName = shelfCode.replace(/[^A-Z0-9]/gi, "_");
       const destPath = `${FileSystem.cacheDirectory}Barcode_Scaffale_${safeName}_R${level}.pdf`;
       await FileSystem.moveAsync({ from: uri, to: destPath });
 
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) {
-        Alert.alert('Condivisione non disponibile', 'Il tuo dispositivo non supporta la condivisione di file PDF.');
+        Alert.alert(
+          "Condivisione non disponibile",
+          "Il tuo dispositivo non supporta la condivisione di file PDF.",
+        );
         return;
       }
       await Sharing.shareAsync(destPath, {
-        mimeType: 'application/pdf',
+        mimeType: "application/pdf",
         dialogTitle: `Barcode Scaffale ${shelfCode} · Ripiano ${level}`,
       });
     } catch (err: unknown) {
-      const isCancel = (err as { message?: string })?.message?.toLowerCase().includes('cancel');
+      const isCancel = (err as { message?: string })?.message
+        ?.toLowerCase()
+        .includes("cancel");
       if (!isCancel) {
         Alert.alert(
-          'Errore generazione PDF',
-          'Impossibile generare il PDF. Verifica che il dispositivo sia connesso a internet (necessario per i barcode).',
+          "Errore generazione PDF",
+          "Impossibile generare il PDF. Verifica che il dispositivo sia connesso a internet (necessario per i barcode).",
         );
       }
     } finally {
@@ -54,7 +64,7 @@ export default function ShelfQRScreen({ route, navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       <View style={styles.barcodeWrapper}>
         <Barcode
           value={barcodeValue}
@@ -68,7 +78,7 @@ export default function ShelfQRScreen({ route, navigation }: Props) {
       </View>
 
       <Text style={styles.hint}>
-        Stampa e attacca fisicamente questo barcode sullo scaffale.{'\n'}
+        Stampa e attacca fisicamente questo barcode sullo scaffale.{"\n"}
         La fotocamera dell'app lo riconoscerà direttamente.
       </Text>
 
@@ -87,7 +97,9 @@ export default function ShelfQRScreen({ route, navigation }: Props) {
 
         <TouchableOpacity
           style={[styles.btn, styles.btnOpen]}
-          onPress={() => navigation.replace('ShelfDetail', { shelfId, warehouseId })}
+          onPress={() =>
+            navigation.replace("ShelfDetail", { shelfId, warehouseId })
+          }
         >
           <Text style={styles.btnText}>Vai allo scaffale</Text>
         </TouchableOpacity>
@@ -96,7 +108,11 @@ export default function ShelfQRScreen({ route, navigation }: Props) {
   );
 }
 
-function buildBarcodeHTML(value: string, shelfCode: string, level: number): string {
+function buildBarcodeHTML(
+  value: string,
+  shelfCode: string,
+  level: number,
+): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -133,29 +149,46 @@ function buildBarcodeHTML(value: string, shelfCode: string, level: number): stri
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, backgroundColor: '#F3F4F6',
-    alignItems: 'center', justifyContent: 'center', padding: 24,
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
   },
   barcodeWrapper: {
-    padding: 20, backgroundColor: '#fff', borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
+    padding: 20,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
   barcodeSubtext: {
-    marginTop: 10, fontSize: 12, color: '#9CA3AF', fontWeight: '500',
+    marginTop: 10,
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: "500",
   },
   hint: {
-    fontSize: 13, color: '#9CA3AF', textAlign: 'center',
-    marginTop: 20, lineHeight: 20,
+    fontSize: 13,
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginTop: 20,
+    lineHeight: 20,
   },
-  actions: { width: '100%', maxWidth: 320, marginTop: 24, gap: 12 },
+  actions: { width: "100%", maxWidth: 320, marginTop: 24, gap: 12 },
   btn: {
-    borderRadius: 10, padding: 16, alignItems: 'center',
-    justifyContent: 'center', flexDirection: 'row',
+    borderRadius: 10,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
   },
-  btnShare: { backgroundColor: '#2563EB' },
-  btnOpen: { backgroundColor: '#374151' },
-  btnDisabled: { backgroundColor: '#93C5FD' },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  btnShare: { backgroundColor: "#2563EB" },
+  btnOpen: { backgroundColor: "#374151" },
+  btnDisabled: { backgroundColor: "#93C5FD" },
+  btnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

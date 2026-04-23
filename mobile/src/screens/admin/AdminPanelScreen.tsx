@@ -119,7 +119,10 @@ export default function AdminPanelScreen({ navigation }: Props) {
         />
       )}
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+      <TouchableOpacity style={styles.logoutBtn} onPress={() => Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
+        { text: 'Annulla', style: 'cancel' },
+        { text: 'Esci', style: 'destructive', onPress: logout },
+      ])}>
         <Ionicons name="log-out-outline" size={18} color="#DC2626" />
         <Text style={styles.logoutText}>Esci</Text>
       </TouchableOpacity>

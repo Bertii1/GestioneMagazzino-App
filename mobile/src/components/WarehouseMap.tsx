@@ -1,7 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Shelf } from '../types';
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Shelf } from "../types";
 
 interface Props {
   gridWidth: number;
@@ -13,7 +19,7 @@ interface Props {
   onCellPress?: (x: number, y: number) => void;
 }
 
-const CELL_SIZE = 52;
+const CELL_SIZE = 62;
 
 export default function WarehouseMap({
   gridWidth,
@@ -35,10 +41,7 @@ export default function WarehouseMap({
       showsHorizontalScrollIndicator={false}
       style={styles.outerScroll}
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled
-      >
+      <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
         <View style={styles.grid}>
           {/* Riga etichette colonne */}
           <View style={styles.row}>
@@ -64,9 +67,7 @@ export default function WarehouseMap({
               {Array.from({ length: gridWidth }).map((_, col) => {
                 const shelf = shelfMap.get(`${col},${row}`);
                 const isCellSelected =
-                  !shelf &&
-                  selectedCell?.x === col &&
-                  selectedCell?.y === row;
+                  !shelf && selectedCell?.x === col && selectedCell?.y === row;
 
                 if (shelf) {
                   const isSelected = shelf._id === selectedShelfId;
@@ -84,15 +85,17 @@ export default function WarehouseMap({
                     >
                       {/* Linee ripiani decorative */}
                       <View style={styles.shelfLines}>
-                        {Array.from({ length: Math.min(shelf.levels, 4) }).map((_, i) => (
-                          <View
-                            key={i}
-                            style={[
-                              styles.shelfLine,
-                              isSelected && styles.shelfLineSelected,
-                            ]}
-                          />
-                        ))}
+                        {Array.from({ length: Math.min(shelf.levels, 4) }).map(
+                          (_, i) => (
+                            <View
+                              key={i}
+                              style={[
+                                styles.shelfLine,
+                                isSelected && styles.shelfLineSelected,
+                              ]}
+                            />
+                          ),
+                        )}
                       </View>
                       <Text
                         style={[
@@ -121,7 +124,7 @@ export default function WarehouseMap({
                     <Ionicons
                       name="add"
                       size={isCellSelected ? 18 : 14}
-                      color={isCellSelected ? '#D97706' : '#D1D5DB'}
+                      color={isCellSelected ? "#D97706" : "#D1D5DB"}
                     />
                   </TouchableOpacity>
                 );
@@ -137,55 +140,74 @@ export default function WarehouseMap({
 const styles = StyleSheet.create({
   outerScroll: { flex: 1 },
   grid: { padding: 8 },
-  row: { flexDirection: 'row' },
+  row: { flexDirection: "row" },
 
   labelCorner: { width: 24, height: 24 },
   colLabel: {
-    width: CELL_SIZE, height: 24,
-    justifyContent: 'center', alignItems: 'center',
+    width: CELL_SIZE,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   rowLabel: {
-    width: 24, height: CELL_SIZE,
-    justifyContent: 'center', alignItems: 'center',
+    width: 20,
+    height: CELL_SIZE,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  labelText: { fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
+  labelText: { fontSize: 12, color: "#9CA3AF", fontWeight: "600" },
 
   cell: {
-    width: CELL_SIZE, height: CELL_SIZE,
-    borderWidth: 1, justifyContent: 'center', alignItems: 'center',
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    borderWidth: 0.5,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   emptyCell: {
-    backgroundColor: '#F9FAFB', borderColor: '#E5E7EB',
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
   },
   emptyCellSelected: {
-    backgroundColor: '#FEF3C7', borderColor: '#F59E0B', borderWidth: 2,
+    backgroundColor: "#FEF3C7",
+    borderColor: "#F59E0B",
+    borderWidth: 2,
   },
 
   shelfCell: {
-    backgroundColor: '#DBEAFE', borderColor: '#93C5FD', borderWidth: 2,
+    backgroundColor: "#DBEAFE",
+    borderColor: "#93C5FD",
+    borderWidth: 2,
     borderRadius: 6,
   },
   shelfCellSelected: {
-    backgroundColor: '#2563EB', borderColor: '#1D4ED8',
+    backgroundColor: "#2563EB",
+    borderColor: "#1D4ED8",
   },
 
   shelfLines: {
-    flex: 1, justifyContent: 'space-evenly',
-    width: '70%', paddingVertical: 4,
+    flex: 1,
+    justifyContent: "space-evenly",
+    width: "75%",
+    paddingVertical: 4,
   },
   shelfLine: {
-    height: 2, backgroundColor: '#60A5FA', borderRadius: 1,
+    height: 2,
+    backgroundColor: "#60A5FA",
+    borderRadius: 1,
   },
   shelfLineSelected: {
-    backgroundColor: '#BFDBFE',
+    backgroundColor: "#BFDBFE",
   },
 
   shelfCode: {
-    fontSize: 11, fontWeight: '700', color: '#1D4ED8',
-    marginBottom: 2,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1D4ED8",
+    marginBottom: 3,
   },
   shelfCodeSelected: {
-    color: '#fff',
+    color: "#fff",
   },
 });

@@ -1,13 +1,13 @@
-import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
-import { discoverServer, verifyServerUrl } from '../services/serverDiscovery';
-import { setServerUrl } from '../services/api';
+import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { discoverServer, verifyServerUrl } from "../services/serverDiscovery";
+import { setServerUrl } from "../services/api";
 
-const STORAGE_KEY = 'server_url';
+const STORAGE_KEY = "server_url";
 
 /** URL fisso configurato in app.json extra.apiUrl (per produzione cloud) */
-const FIXED_API_URL = (Constants.expoConfig?.extra?.apiUrl as string) || '';
+const FIXED_API_URL = "https://18.102.152.192.nip.io";
 
 interface ServerState {
   /** URL base del server, es. "http://192.168.0.240:3000" */
@@ -27,7 +27,7 @@ interface ServerState {
 
 export const useServerStore = create<ServerState>((set, get) => ({
   serverUrl: null,
-  isDiscovering: true,   // parte subito in discovering, discover() viene chiamato al mount
+  isDiscovering: true, // parte subito in discovering, discover() viene chiamato al mount
   progress: 0,
 
   discover: async () => {
@@ -71,13 +71,13 @@ export const useServerStore = create<ServerState>((set, get) => ({
 
   setManualUrl: async (raw: string) => {
     // Normalizza: aggiungi http:// se mancante, rimuovi trailing slash
-    let url = raw.trim().replace(/\/$/, '');
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    let url = raw.trim().replace(/\/$/, "");
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
       url = `http://${url}`;
     }
     // Se non c'è la porta, aggiungi :3000 solo per HTTP (HTTPS usa 443 di default)
-    const isHttps = url.startsWith('https://');
-    const hasPort = /:\d+$/.test(url.replace(/^https?:\/\//, '').split('/')[0]);
+    const isHttps = url.startsWith("https://");
+    const hasPort = /:\d+$/.test(url.replace(/^https?:\/\//, "").split("/")[0]);
     if (!hasPort && !isHttps) url = `${url}:3000`;
 
     const ok = await verifyServerUrl(url);
