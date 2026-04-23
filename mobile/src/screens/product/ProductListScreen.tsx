@@ -101,6 +101,11 @@ export default function ProductListScreen({ navigation }: Props) {
                     </Text>
                   </View>
                 )}
+                {item.color ? (
+                  <View style={styles.colorTag}>
+                    <Text style={styles.colorTagText}>{item.color}</Text>
+                  </View>
+                ) : null}
                 {item.brand ? (
                   <View style={styles.brandTag}>
                     <Text style={styles.brandTagText}>{item.brand}</Text>
@@ -198,6 +203,11 @@ const styles = StyleSheet.create({
   conditionTagTextNuovo: { color: '#16A34A' },
   conditionTagTextUsato: { color: '#D97706' },
   conditionTagTextVuoto: { color: '#DC2626' },
+  colorTag: {
+    borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
+    backgroundColor: '#EDE9FE',
+  },
+  colorTagText: { fontSize: 10, fontWeight: '700', color: '#7C3AED' },
   brandTag: {
     borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2,
     backgroundColor: '#DBEAFE',
