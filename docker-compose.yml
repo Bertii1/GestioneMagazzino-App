@@ -81,8 +81,6 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
-      - '--web.external-url=https://${DOMAIN}/prometheus'
-      - '--web.route-prefix=/prometheus'
     depends_on:
       server:
         condition: service_healthy
