@@ -119,10 +119,14 @@ jobs:
         run: eas build --platform ios --profile preview --non-interactive
 
       - name: Notify server of new Android version
-        if: (steps.platform.outputs.value == 'android' || steps.platform.outputs.value == 'all') && secrets.BACKUP_API_KEY != ''
+        if: steps.platform.outputs.value == 'android' || steps.platform.outputs.value == 'all'
         env:
           BACKUP_API_KEY: ${{ secrets.BACKUP_API_KEY }}
         run: |
+          if [ -z "$BACKUP_API_KEY" ]; then
+            echo "BACKUP_API_KEY not set, skipping version update"
+            exit 0
+          fi
           BUILD_INFO=$(eas build:list --platform android --status finished --limit 1 --json 2>/dev/null || echo "[]")
           APK_URL=$(echo "$BUILD_INFO" | python3 -c "
           import sys, json
