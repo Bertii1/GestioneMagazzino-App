@@ -21,6 +21,9 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Screenshots output
+mobile/screenshots/output/
+
 #claude
 CLAUDE.original.md
 New_Features.MD

@@ -40,24 +40,15 @@ Mappa interattiva &nbsp;·&nbsp; Scansione barcode &nbsp;·&nbsp; Riconoscimento
 
 <div align="center">
 
-<!-- Demo GIF — sostituisci con il path reale una volta pronta -->
-<!-- Dimensione consigliata: max 600px larghezza, registra con Expo Go o simulatore -->
-
-![Demo](docs/screenshots/demo.gif)
-
-</div>
-
-<br>
-
-<div align="center">
-
-| Login & QR Code | Mappa Magazzino | Dettaglio Scaffale | Scheda Prodotto |
+| Login | Lista Magazzini | Mappa Magazzino | Dettaglio Scaffale |
 |:---:|:---:|:---:|:---:|
-| ![Login](docs/screenshots/login.png) | ![Mappa](docs/screenshots/warehouse.png) | ![Scaffale](docs/screenshots/shelf.png) | ![Prodotto](docs/screenshots/product.png) |
+| ![Login](docs/screenshots/01_login.png) | ![Lista](docs/screenshots/02_warehouse_list.png) | ![Mappa](docs/screenshots/03_warehouse_map.png) | ![Scaffale](docs/screenshots/04_shelf_detail.png) |
+
+| Lista Prodotti | Dettaglio Prodotto | Pannello Admin |
+|:---:|:---:|:---:|
+| ![Prodotti](docs/screenshots/05_product_list.png) | ![Prodotto](docs/screenshots/06_product_detail.png) | ![Admin](docs/screenshots/07_admin_panel.png) |
 
 </div>
-
-> **Come aggiungere le immagini:** crea la cartella `docs/screenshots/`, salva i file con i nomi indicati sopra e rimuovi questo blocco. Dimensione consigliata per gli screenshot: **390 × 844 px** (portrait, iPhone 14 Pro / Pixel 7).
 
 ---
 

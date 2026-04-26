@@ -1,0 +1,109 @@
+appId: com.tuaazienda.gestionemagazzino
+---
+# Avvia app da zero (AsyncStorage pulito)
+- launchApp:
+    clearState: true
+
+# ── Screenshot 1: Schermata di login ────────────────────────────────────────
+# Aspetta la fine del server discovery (max 60s) → appare ServerSetupScreen
+- extendedWaitUntil:
+    visible:
+      text: "Server non trovato"
+    timeout: 60000
+
+# Configura URL server (HTTPS)
+- tapOn:
+    text: "HTTPS (Cloud)"
+- tapOn:
+    text: "Es. yourserver.com"
+- inputText: ${SERVER_HOST}
+- tapOn:
+    text: "Connetti"
+
+# Attendi login screen
+- extendedWaitUntil:
+    visible:
+      text: "Accedi al tuo account"
+    timeout: 15000
+
+- takeScreenshot: 01_login
+
+# ── Login ───────────────────────────────────────────────────────────────────
+- tapOn:
+    text: "Email"
+- inputText: ${USERNAME}
+- tapOn:
+    text: "Password"
+- inputText: ${PASSWORD}
+- tapOn:
+    text: "Accedi"
+
+# Attendi lista magazzini
+- extendedWaitUntil:
+    visible:
+      text: "Magazzini"
+    timeout: 15000
+
+# ── Screenshot 2: Lista magazzini ───────────────────────────────────────────
+- waitForAnimationToEnd
+- takeScreenshot: 02_warehouse_list
+
+# ── Screenshot 3: Mappa magazzino ───────────────────────────────────────────
+# WAREHOUSE_NAME = nome esatto del magazzino da aprire (es. "Magazzino Principale")
+- tapOn:
+    text: ${WAREHOUSE_NAME}
+
+- takeScreenshot: 03_warehouse_map
+
+# ── Screenshot 4: Dettaglio scaffale ───────────────────────────────────────
+# SHELF_CODE = codice di uno scaffale esistente (es. "A1", "B2")
+# Se non impostato o non esiste, il blocco viene saltato
+- runFlow:
+    when:
+      visible: ${SHELF_CODE}
+    commands:
+      - tapOn:
+          text: ${SHELF_CODE}
+      - tapOn:
+          text: "Apri"
+      - waitForAnimationToEnd
+      - takeScreenshot: 04_shelf_detail
+
+# Torna alla lista magazzini
+- back
+- back
+
+# ── Screenshot 5: Lista prodotti ───────────────────────────────────────────
+- tapOn:
+    text: "Prodotti"
+- extendedWaitUntil:
+    visible:
+      text: "Prodotti"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 05_product_list
+
+# ── Screenshot 6: Dettaglio prodotto ──────────────────────────────────────
+# Tap sul primo prodotto
+- tapOn:
+    index: 0
+    text: "1161"
+- extendedWaitUntil:
+    visible:
+      text: "Dettaglio Prodotto"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 06_product_detail
+
+# Torna alla lista
+- back
+
+# ── Screenshot 7: Admin panel (solo se admin) ──────────────────────────────
+- runFlow:
+    when:
+      visible: "Admin"
+    commands:
+      - tapOn:
+          text: "Admin"
+      - waitForAnimationToEnd
+      - takeScreenshot: 07_admin_panel

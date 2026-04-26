@@ -1,0 +1,14 @@
+services:
+  android:
+    image: budtmo/docker-android:emulator_14.0
+    container_name: magazzino_android_screenshots
+    privileged: true
+    volumes:
+      - /dev/kvm:/dev/kvm
+    ports:
+      - "5555:5555"   # ADB
+      - "6080:6080"   # VNC web (http://localhost:6080 per vedere lo schermo)
+    environment:
+      EMULATOR_DEVICE: "Pixel 8"
+      WEB_VNC: "true"
+      APPIUM: "false"
