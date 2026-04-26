@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="mobile/assets/icon.png" width="120" alt="Gestione Magazzino icon" />
+
 # Gestione Magazzino HCS
 
 **App mobile-first per gestire prodotti in magazzino**
