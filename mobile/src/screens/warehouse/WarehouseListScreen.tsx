@@ -1,17 +1,26 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState } from "react";
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
-  RefreshControl, Alert, Modal, TextInput, KeyboardAvoidingView,
-  Platform, ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Warehouse, RootStackParamList } from '../../types';
-import { warehouseService } from '../../services/warehouseService';
-import { Ionicons } from '@expo/vector-icons';
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  RefreshControl,
+  Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Warehouse, RootStackParamList } from "../../types";
+import { warehouseService } from "../../services/warehouseService";
+import { Ionicons } from "@expo/vector-icons";
 
-type Props = NativeStackScreenProps<RootStackParamList, 'MainTabs'>;
+type Props = NativeStackScreenProps<RootStackParamList, "MainTabs">;
 
 export default function WarehouseListScreen({ navigation }: Props) {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -20,10 +29,10 @@ export default function WarehouseListScreen({ navigation }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Campi form creazione/modifica
-  const [newName, setNewName] = useState('');
-  const [newDesc, setNewDesc] = useState('');
-  const [newWidth, setNewWidth] = useState('10');
-  const [newHeight, setNewHeight] = useState('10');
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newWidth, setNewWidth] = useState("10");
+  const [newHeight, setNewHeight] = useState("10");
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -31,14 +40,14 @@ export default function WarehouseListScreen({ navigation }: Props) {
       const data = await warehouseService.getAll();
       setWarehouses(data);
     } catch {
-      Alert.alert('Errore', 'Impossibile caricare i magazzini');
+      Alert.alert("Errore", "Impossibile caricare i magazzini");
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+    }, [load]),
   );
 
   const onRefresh = async () => {
@@ -49,17 +58,17 @@ export default function WarehouseListScreen({ navigation }: Props) {
 
   const openModal = () => {
     setEditingId(null);
-    setNewName('');
-    setNewDesc('');
-    setNewWidth('10');
-    setNewHeight('10');
+    setNewName("");
+    setNewDesc("");
+    setNewWidth("10");
+    setNewHeight("10");
     setModalVisible(true);
   };
 
   const openEditModal = (wh: Warehouse) => {
     setEditingId(wh._id);
     setNewName(wh.name);
-    setNewDesc(wh.description ?? '');
+    setNewDesc(wh.description ?? "");
     setNewWidth(String(wh.gridWidth));
     setNewHeight(String(wh.gridHeight));
     setModalVisible(true);
@@ -67,13 +76,13 @@ export default function WarehouseListScreen({ navigation }: Props) {
 
   const handleSave = async () => {
     if (!newName.trim()) {
-      Alert.alert('Errore', 'Il nome del magazzino è obbligatorio');
+      Alert.alert("Errore", "Il nome del magazzino è obbligatorio");
       return;
     }
     const w = parseInt(newWidth, 10);
     const h = parseInt(newHeight, 10);
     if (!w || !h || w < 1 || h < 1) {
-      Alert.alert('Errore', 'Larghezza e altezza devono essere almeno 1');
+      Alert.alert("Errore", "Larghezza e altezza devono essere almeno 1");
       return;
     }
     setSaving(true);
@@ -96,7 +105,12 @@ export default function WarehouseListScreen({ navigation }: Props) {
       setModalVisible(false);
       await load();
     } catch {
-      Alert.alert('Errore', editingId ? 'Impossibile aggiornare il magazzino' : 'Impossibile creare il magazzino');
+      Alert.alert(
+        "Errore",
+        editingId
+          ? "Impossibile aggiornare il magazzino"
+          : "Impossibile creare il magazzino",
+      );
     } finally {
       setSaving(false);
     }
@@ -104,23 +118,23 @@ export default function WarehouseListScreen({ navigation }: Props) {
 
   const handleDeleteWarehouse = (wh: Warehouse) => {
     Alert.alert(
-      'Elimina magazzino',
+      "Elimina magazzino",
       `Eliminare "${wh.name}" e tutti i suoi scaffali/prodotti?`,
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: "Annulla", style: "cancel" },
         {
-          text: 'Elimina',
-          style: 'destructive',
+          text: "Elimina",
+          style: "destructive",
           onPress: async () => {
             try {
               await warehouseService.delete(wh._id);
-              setWarehouses(prev => prev.filter(w => w._id !== wh._id));
+              setWarehouses((prev) => prev.filter((w) => w._id !== wh._id));
             } catch {
-              Alert.alert('Errore', 'Impossibile eliminare il magazzino');
+              Alert.alert("Errore", "Impossibile eliminare il magazzino");
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -128,10 +142,12 @@ export default function WarehouseListScreen({ navigation }: Props) {
     <TouchableOpacity
       style={styles.card}
       onPress={() =>
-        (navigation as unknown as { navigate: (s: string, p: object) => void }).navigate(
-          'WarehouseMap',
-          { warehouseId: item._id, warehouseName: item.name }
-        )
+        (
+          navigation as unknown as { navigate: (s: string, p: object) => void }
+        ).navigate("WarehouseMap", {
+          warehouseId: item._id,
+          warehouseName: item.name,
+        })
       }
       onLongPress={() => handleDeleteWarehouse(item)}
     >
@@ -149,13 +165,6 @@ export default function WarehouseListScreen({ navigation }: Props) {
         >
           <Ionicons name="pencil-outline" size={18} color="#2563EB" />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() => handleDeleteWarehouse(item)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
-        </TouchableOpacity>
       </View>
       {item.description ? (
         <Text style={styles.cardDescription}>{item.description}</Text>
@@ -164,16 +173,18 @@ export default function WarehouseListScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <FlatList
         data={warehouses}
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            Nessun magazzino.{'\n'}Creane uno con il pulsante +
+            Nessun magazzino.{"\n"}Creane uno con il pulsante +
           </Text>
         }
       />
@@ -192,11 +203,13 @@ export default function WarehouseListScreen({ navigation }: Props) {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingId ? 'Modifica Magazzino' : 'Nuovo Magazzino'}</Text>
+              <Text style={styles.modalTitle}>
+                {editingId ? "Modifica Magazzino" : "Nuovo Magazzino"}
+              </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
@@ -250,8 +263,12 @@ export default function WarehouseListScreen({ navigation }: Props) {
               >
                 <Text style={styles.createBtnText}>
                   {saving
-                    ? (editingId ? 'Salvataggio...' : 'Creazione...')
-                    : (editingId ? 'Salva modifiche' : 'Crea magazzino')}
+                    ? editingId
+                      ? "Salvataggio..."
+                      : "Creazione..."
+                    : editingId
+                      ? "Salva modifiche"
+                      : "Crea magazzino"}
                 </Text>
               </TouchableOpacity>
             </ScrollView>
@@ -263,57 +280,114 @@ export default function WarehouseListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: "#F9FAFB" },
   list: { padding: 16, paddingBottom: 88 },
   card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12,
-    elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 4,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cardTitle: { fontSize: 18, fontWeight: "600", color: "#111827" },
   cardMeta: {
-    fontSize: 12, color: '#6B7280', backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+    fontSize: 12,
+    color: "#6B7280",
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  cardDescription: { marginTop: 8, fontSize: 14, color: '#6B7280' },
+  cardDescription: { marginTop: 8, fontSize: 14, color: "#6B7280" },
   editBtn: {
-    padding: 8, borderRadius: 6, backgroundColor: '#EFF6FF', marginLeft: 10,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "#EFF6FF",
+    marginLeft: 8,
   },
   deleteBtn: {
-    padding: 8, borderRadius: 6, backgroundColor: '#FEF2F2', marginLeft: 8,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "#FEF2F2",
+    marginLeft: 8,
   },
-  empty: { textAlign: 'center', color: '#9CA3AF', marginTop: 60, fontSize: 16, lineHeight: 26 },
+  empty: {
+    textAlign: "center",
+    color: "#9CA3AF",
+    marginTop: 60,
+    fontSize: 16,
+    lineHeight: 26,
+  },
   fab: {
-    position: 'absolute', bottom: 24, right: 20,
-    backgroundColor: '#2563EB', width: 56, height: 56, borderRadius: 28,
-    justifyContent: 'center', alignItems: 'center', elevation: 5,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2, shadowRadius: 6,
+    position: "absolute",
+    bottom: 24,
+    right: 20,
+    backgroundColor: "#2563EB",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
-  fabText: { color: '#fff', fontSize: 28, lineHeight: 32, fontWeight: '300' },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  fabText: { color: "#fff", fontSize: 28, lineHeight: 32, fontWeight: "300" },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
   modalSheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 20, paddingBottom: 36,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 36,
   },
   modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
   },
-  modalTitle: { fontSize: 20, fontWeight: '700', color: '#111827' },
-  modalClose: { fontSize: 22, color: '#6B7280', paddingHorizontal: 4 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 12 },
+  modalTitle: { fontSize: 20, fontWeight: "700", color: "#111827" },
+  modalClose: { fontSize: 22, color: "#6B7280", paddingHorizontal: 4 },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 6,
+    marginTop: 12,
+  },
   input: {
-    borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8,
-    padding: 12, fontSize: 15, backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+    backgroundColor: "#F9FAFB",
   },
-  gridRow: { flexDirection: 'row', gap: 12 },
+  gridRow: { flexDirection: "row", gap: 12 },
   gridField: { flex: 1 },
   createBtn: {
-    backgroundColor: '#2563EB', borderRadius: 10,
-    padding: 16, alignItems: 'center', marginTop: 24,
+    backgroundColor: "#2563EB",
+    borderRadius: 10,
+    padding: 16,
+    alignItems: "center",
+    marginTop: 24,
   },
-  createBtnDisabled: { backgroundColor: '#93C5FD' },
-  createBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  createBtnDisabled: { backgroundColor: "#93C5FD" },
+  createBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

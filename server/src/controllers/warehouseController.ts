@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import Warehouse from '../models/Warehouse';
 import { AuthRequest } from '../middleware/auth';
+import { logActivity, getIp } from '../utils/activityLogger';
 
 export const getWarehouses = async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -34,6 +35,7 @@ export const createWarehouse = async (req: AuthRequest, res: Response, next: Nex
     }
 
     const warehouse = await Warehouse.create(req.body);
+    await logActivity(req.user!, getIp(req), 'create_warehouse', { entity: 'warehouse', entityId: String(warehouse._id), entityName: warehouse.name });
     res.status(201).json(warehouse);
   } catch (err) {
     next(err);
@@ -56,6 +58,7 @@ export const updateWarehouse = async (req: AuthRequest, res: Response, next: Nex
       res.status(404).json({ message: 'Magazzino non trovato' });
       return;
     }
+    await logActivity(req.user!, getIp(req), 'update_warehouse', { entity: 'warehouse', entityId: String(warehouse._id), entityName: warehouse.name });
     res.json(warehouse);
   } catch (err) {
     next(err);
@@ -69,6 +72,7 @@ export const deleteWarehouse = async (req: AuthRequest, res: Response, next: Nex
       res.status(404).json({ message: 'Magazzino non trovato' });
       return;
     }
+    await logActivity(req.user!, getIp(req), 'delete_warehouse', { entity: 'warehouse', entityId: String(warehouse._id), entityName: warehouse.name });
     res.json({ message: 'Magazzino eliminato' });
   } catch (err) {
     next(err);

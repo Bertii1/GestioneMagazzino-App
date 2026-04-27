@@ -7,10 +7,9 @@ import { setServerUrl } from "../services/api";
 const STORAGE_KEY = "server_url";
 
 /** URL fisso configurato in app.json extra.apiUrl (per produzione cloud) */
-const FIXED_API_URL = "https://18.102.152.192.nip.io";
+const FIXED_API_URL = ""; //"https://18.102.152.192.nip.io";
 
 interface ServerState {
-  /** URL base del server, es. "http://192.168.0.240:3000" */
   serverUrl: string | null;
   /** true mentre è in corso la scansione di rete */
   isDiscovering: boolean;

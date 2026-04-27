@@ -109,6 +109,29 @@ export interface AuthResponse {
   mustChangePassword?: boolean;
 }
 
+// ─── Activity Log ─────────────────────────────────────────────────────────────
+
+export interface ActivityLog {
+  _id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  action: string;
+  entity?: string;
+  entityId?: string;
+  entityName?: string;
+  details?: Record<string, unknown>;
+  ip?: string;
+  createdAt: string;
+}
+
+export interface ActivityLogResponse {
+  logs: ActivityLog[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 // ─── Navigazione ──────────────────────────────────────────────────────────────
 
 export type RootStackParamList = {
@@ -124,4 +147,5 @@ export type RootStackParamList = {
   ShelfQR: { shelfId: string; shelfCode: string; shelfName?: string; warehouseId: string; level: number };
   BatchQRPrint: { warehouseId: string; warehouseName: string };
   MyQRCode: undefined;
+  ActivityLog: undefined;
 };

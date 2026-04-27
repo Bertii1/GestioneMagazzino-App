@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import Shelf from '../models/Shelf';
 import { AuthRequest } from '../middleware/auth';
+import { logActivity, getIp } from '../utils/activityLogger';
 
 export const getShelvesByWarehouse = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -37,6 +38,7 @@ export const createShelf = async (req: AuthRequest, res: Response, next: NextFun
       ...req.body,
       warehouseId: req.params.warehouseId,
     });
+    await logActivity(req.user!, getIp(req), 'create_shelf', { entity: 'shelf', entityId: String(shelf._id), entityName: shelf.code });
     res.status(201).json(shelf);
   } catch (err) {
     next(err);
@@ -61,6 +63,7 @@ export const updateShelf = async (req: AuthRequest, res: Response, next: NextFun
       res.status(404).json({ message: 'Scaffale non trovato' });
       return;
     }
+    await logActivity(req.user!, getIp(req), 'update_shelf', { entity: 'shelf', entityId: String(shelf._id), entityName: shelf.code });
     res.json(shelf);
   } catch (err) {
     next(err);
@@ -74,6 +77,7 @@ export const deleteShelf = async (req: AuthRequest, res: Response, next: NextFun
       res.status(404).json({ message: 'Scaffale non trovato' });
       return;
     }
+    await logActivity(req.user!, getIp(req), 'delete_shelf', { entity: 'shelf', entityId: String(shelf._id), entityName: shelf.code });
     res.json({ message: 'Scaffale eliminato' });
   } catch (err) {
     next(err);

@@ -16,6 +16,7 @@ import visionRoutes from './routes/vision';
 import userRoutes from './routes/users';
 import backupRoutes from './routes/backup';
 import versionRoutes from './routes/version';
+import activityRoutes from './routes/activity';
 import { errorHandler } from './middleware/errorHandler';
 import { metricsMiddleware } from './middleware/metricsMiddleware';
 import metricsRoutes from './routes/metrics';
@@ -74,6 +75,7 @@ app.use('/api/vision', visionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/version', versionRoutes);
+app.use('/api/activity', activityRoutes);
 
 // Metrics — solo rete interna Docker, bloccato da Caddy esternamente
 app.use('/metrics', metricsRoutes);

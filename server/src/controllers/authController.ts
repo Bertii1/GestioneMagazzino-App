@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { env } from '../config/env';
+import { logActivity, getIp } from '../utils/activityLogger';
 
 const signToken = (id: string, tokenVersion: number): string =>
   jwt.sign({ id, tokenVersion }, env.JWT_SECRET, {
@@ -15,7 +16,7 @@ const signToken = (id: string, tokenVersion: number): string =>
  * Registrazione utente — solo admin può creare nuovi utenti.
  * Il middleware protect + requireAdmin sono applicati nella route.
  */
-export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const register = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -39,6 +40,9 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       mustChangePassword: true,
     });
 
+    if (req.user) {
+      await logActivity(req.user, getIp(req), 'create_user', { entity: 'user', entityId: String(user._id), entityName: user.name });
+    }
     res.status(201).json({ user });
   } catch (err) {
     next(err);
@@ -62,6 +66,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     }
 
     const token = signToken(user.id as string, user.tokenVersion);
+    await logActivity(user, getIp(req), 'login');
     res.json({
       token,
       user,
@@ -98,6 +103,7 @@ export const changePassword = async (req: AuthRequest, res: Response, next: Next
     user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
 
+    await logActivity(user, getIp(req), 'change_password');
     const newToken = signToken(user.id as string, user.tokenVersion);
     res.json({ message: 'Password aggiornata con successo', token: newToken });
   } catch (err) {
@@ -126,6 +132,7 @@ export const qrLogin = async (req: Request, res: Response, next: NextFunction): 
       return;
     }
     const jwtToken = signToken(user.id as string, user.tokenVersion);
+    await logActivity(user, getIp(req), 'qr_login');
     res.json({
       token: jwtToken,
       user,
@@ -157,6 +164,7 @@ export const regenerateQrToken = async (req: AuthRequest, res: Response, next: N
 
 export const logout = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    await logActivity(req.user!, getIp(req), 'logout');
     await User.findByIdAndUpdate(req.user!._id, { $inc: { tokenVersion: 1 } });
     res.json({ message: 'Logout effettuato con successo' });
   } catch (err) {

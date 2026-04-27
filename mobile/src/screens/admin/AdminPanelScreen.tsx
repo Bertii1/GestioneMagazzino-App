@@ -7,6 +7,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootStackParamList, User } from '../../types';
 import { adminService } from '../../services/adminService';
 import { useAuthStore } from '../../store/authStore';
@@ -14,6 +15,7 @@ import { useAuthStore } from '../../store/authStore';
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminPanel'>;
 
 export default function AdminPanelScreen({ navigation }: Props) {
+  const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const currentUser = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [users, setUsers] = useState<User[]>([]);
@@ -99,10 +101,15 @@ export default function AdminPanelScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Gestione Utenti</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="person-add-outline" size={18} color="#fff" />
-          <Text style={styles.addBtnText}>Nuovo</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={styles.logBtn} onPress={() => nav.navigate('ActivityLog')}>
+            <Ionicons name="list-outline" size={18} color="#2563EB" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowCreateModal(true)}>
+            <Ionicons name="person-add-outline" size={18} color="#fff" />
+            <Text style={styles.addBtnText}>Nuovo</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
@@ -326,6 +333,10 @@ const styles = StyleSheet.create({
     padding: 16, paddingTop: 8,
   },
   title: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  logBtn: {
+    width: 38, height: 38, borderRadius: 8, borderWidth: 1.5,
+    borderColor: '#2563EB', alignItems: 'center', justifyContent: 'center',
+  },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#2563EB', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10,

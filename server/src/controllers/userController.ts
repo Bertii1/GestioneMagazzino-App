@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+import { logActivity, getIp } from '../utils/activityLogger';
 
 export const listUsers = async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -26,6 +27,7 @@ export const deleteUser = async (req: AuthRequest, res: Response, next: NextFunc
       return;
     }
 
+    await logActivity(req.user!, getIp(req), 'delete_user', { entity: 'user', entityId: String(user._id), entityName: user.name });
     res.json({ message: 'Utente eliminato' });
   } catch (err) {
     next(err);
@@ -52,6 +54,7 @@ export const resetUserPassword = async (req: AuthRequest, res: Response, next: N
     user.mustChangePassword = true;
     await user.save();
 
+    await logActivity(req.user!, getIp(req), 'reset_password', { entity: 'user', entityId: String(user._id), entityName: user.name });
     res.json({ message: 'Password reimpostata — l\'utente dovrà cambiarla al prossimo accesso' });
   } catch (err) {
     next(err);

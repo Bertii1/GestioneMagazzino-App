@@ -24,6 +24,7 @@ import ChangePasswordScreen from "../screens/auth/ChangePasswordScreen";
 import MyQRCodeScreen from "../screens/auth/MyQRCodeScreen";
 
 import AdminPanelScreen from "../screens/admin/AdminPanelScreen";
+import ActivityLogScreen from "../screens/admin/ActivityLogScreen";
 
 import WarehouseListScreen from "../screens/warehouse/WarehouseListScreen";
 import WarehouseMapScreen from "../screens/warehouse/WarehouseMapScreen";
@@ -245,7 +246,7 @@ function ServerSetupScreen({
           style={ss.input}
           value={host}
           onChangeText={(v) => setHost(v.replace(/,/g, "."))}
-          placeholder={useHttps ? "Es. yourserver.nip.io" : "Es. 192.168.0.240"}
+          placeholder={useHttps ? "Es. yourserver.com" : "Es. 192.168.0.240"}
           keyboardType="url"
           autoCapitalize="none"
           autoCorrect={false}
@@ -529,6 +530,11 @@ export default function AppNavigator() {
               name="MyQRCode"
               component={MyQRCodeScreen}
               options={{ title: "Il tuo QR code" }}
+            />
+            <Stack.Screen
+              name="ActivityLog"
+              component={ActivityLogScreen}
+              options={{ title: "Registro Attività" }}
             />
           </>
         )}

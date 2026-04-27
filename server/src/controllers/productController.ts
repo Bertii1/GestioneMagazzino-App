@@ -5,6 +5,7 @@ import { validationResult } from 'express-validator';
 import Product from '../models/Product';
 import ProductCatalog from '../models/ProductCatalog';
 import { AuthRequest } from '../middleware/auth';
+import { logActivity, getIp } from '../utils/activityLogger';
 
 const isInternalBarcode = (code: string): boolean => code.startsWith('INT-');
 
@@ -123,6 +124,7 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
 
     const product = await Product.create(req.body);
     await upsertCatalogEntry(req.body);
+    await logActivity(req.user!, getIp(req), 'create_product', { entity: 'product', entityId: String(product._id), entityName: product.name });
     res.status(201).json(product);
   } catch (err) {
     next(err);
@@ -162,6 +164,7 @@ export const updateProduct = async (req: AuthRequest, res: Response, next: NextF
       brand: product.brand,
       category: product.category,
     });
+    await logActivity(req.user!, getIp(req), 'update_product', { entity: 'product', entityId: String(product._id), entityName: product.name });
     res.json(product);
   } catch (err) {
     next(err);
@@ -183,6 +186,7 @@ export const deleteProduct = async (req: AuthRequest, res: Response, next: NextF
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
+    await logActivity(req.user!, getIp(req), 'delete_product', { entity: 'product', entityId: String(product._id), entityName: product.name });
     res.json({ message: 'Prodotto eliminato' });
   } catch (err) {
     next(err);
