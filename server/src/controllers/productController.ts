@@ -52,7 +52,8 @@ export const getProducts = async (req: AuthRequest, res: Response, next: NextFun
     if (warehouseId) filter.warehouseId = warehouseId;
     if (shelfId) filter.shelfId = shelfId;
     if (q) {
-      const regex = { $regex: q as string, $options: 'i' };
+      const qStr = (q as string).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = { $regex: qStr, $options: 'i' };
       filter.$or = [{ name: regex }, { brand: regex }, { description: regex }, { category: regex }];
     }
 
@@ -130,7 +131,22 @@ export const createProduct = async (req: AuthRequest, res: Response, next: NextF
 
 export const updateProduct = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+    const { name, description, color, brand, category, condition, photos, details, warehouseId, shelfId, level, slot, quantity } = req.body;
+    const update: Record<string, unknown> = {};
+    if (name !== undefined) update.name = name;
+    if (description !== undefined) update.description = description;
+    if (color !== undefined) update.color = color;
+    if (brand !== undefined) update.brand = brand;
+    if (category !== undefined) update.category = category;
+    if (condition !== undefined) update.condition = condition;
+    if (photos !== undefined) update.photos = photos;
+    if (details !== undefined) update.details = details;
+    if (warehouseId !== undefined) update.warehouseId = warehouseId;
+    if (shelfId !== undefined) update.shelfId = shelfId;
+    if (level !== undefined) update.level = level;
+    if (slot !== undefined) update.slot = slot;
+    if (quantity !== undefined) update.quantity = quantity;
+    const product = await Product.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
     });

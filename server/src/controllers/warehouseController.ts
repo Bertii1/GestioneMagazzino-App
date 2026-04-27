@@ -42,7 +42,13 @@ export const createWarehouse = async (req: AuthRequest, res: Response, next: Nex
 
 export const updateWarehouse = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const warehouse = await Warehouse.findByIdAndUpdate(req.params.id, req.body, {
+    const { name, description, gridWidth, gridHeight } = req.body;
+    const update: Record<string, unknown> = {};
+    if (name !== undefined) update.name = name;
+    if (description !== undefined) update.description = description;
+    if (gridWidth !== undefined) update.gridWidth = gridWidth;
+    if (gridHeight !== undefined) update.gridHeight = gridHeight;
+    const warehouse = await Warehouse.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
     });

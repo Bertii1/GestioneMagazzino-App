@@ -29,6 +29,9 @@ if (isProd) app.set('trust proxy', 1);
 app.use(helmet());
 
 // CORS — in produzione solo origini esplicite
+if (isProd && env.CORS_ORIGIN === '*') {
+  logger.warn('CORS_ORIGIN=* in produzione: tutte le origini sono consentite');
+}
 app.use(cors({
   origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(',').map(o => o.trim()),
   credentials: true,

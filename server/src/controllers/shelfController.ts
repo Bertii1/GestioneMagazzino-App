@@ -45,7 +45,15 @@ export const createShelf = async (req: AuthRequest, res: Response, next: NextFun
 
 export const updateShelf = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const shelf = await Shelf.findByIdAndUpdate(req.params.id, req.body, {
+    const { code, name, x, y, levels, capacity } = req.body;
+    const update: Record<string, unknown> = {};
+    if (code !== undefined) update.code = code;
+    if (name !== undefined) update.name = name;
+    if (x !== undefined) update.x = x;
+    if (y !== undefined) update.y = y;
+    if (levels !== undefined) update.levels = levels;
+    if (capacity !== undefined) update.capacity = capacity;
+    const shelf = await Shelf.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
     });

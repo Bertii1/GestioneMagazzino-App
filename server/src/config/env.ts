@@ -24,7 +24,7 @@ export const env = {
   WHISPER_URL: optional('WHISPER_URL', 'http://whisper-asr:9000'),
   CORS_ORIGIN: optional('CORS_ORIGIN', '*'),
   ADMIN_EMAIL: optional('ADMIN_EMAIL', 'admin@magazzino.local'),
-  ADMIN_PASSWORD: optional('ADMIN_PASSWORD', 'admin123'),
+  ADMIN_PASSWORD: required('ADMIN_PASSWORD'),
   GEMINI_API_KEY: optional('GEMINI_API_KEY', ''),
   BACKUP_API_KEY: optional('BACKUP_API_KEY', ''),
   MIN_APP_VERSION: optional('MIN_APP_VERSION', '1.0.0'),

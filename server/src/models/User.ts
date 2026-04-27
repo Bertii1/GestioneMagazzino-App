@@ -9,6 +9,7 @@ export interface IUser extends Document {
   role: 'admin' | 'operator';
   mustChangePassword: boolean;
   loginToken: string;
+  loginTokenExpiresAt: Date;
   tokenVersion: number;
   createdAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
@@ -18,13 +19,19 @@ const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true, minlength: 6 },
+    password: { type: String, required: true, minlength: 8 },
     role: { type: String, enum: ['admin', 'operator'], default: 'operator' },
     mustChangePassword: { type: Boolean, default: true },
     loginToken: {
       type: String,
       unique: true,
+      select: false,
       default: () => crypto.randomBytes(32).toString('hex'),
+    },
+    loginTokenExpiresAt: {
+      type: Date,
+      select: false,
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
     tokenVersion: { type: Number, default: 0 },
   },
@@ -46,7 +53,9 @@ UserSchema.methods.comparePassword = async function (candidate: string): Promise
 // Non restituire la password nelle query
 UserSchema.set('toJSON', {
   transform: (_doc, ret) => {
-    delete (ret as { password?: string }).password;
+    delete (ret as { password?: string; loginToken?: string; loginTokenExpiresAt?: Date }).password;
+    delete (ret as { password?: string; loginToken?: string; loginTokenExpiresAt?: Date }).loginToken;
+    delete (ret as { password?: string; loginToken?: string; loginTokenExpiresAt?: Date }).loginTokenExpiresAt;
     return ret;
   },
 });

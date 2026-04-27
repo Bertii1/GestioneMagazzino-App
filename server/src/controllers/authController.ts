@@ -120,8 +120,12 @@ export const qrLogin = async (req: Request, res: Response, next: NextFunction): 
       res.status(400).json({ message: 'Token QR mancante' });
       return;
     }
-    const user = await User.findOne({ loginToken: token });
+    const user = await User.findOne({ loginToken: token }).select('+loginToken +loginTokenExpiresAt');
     if (!user) {
+      res.status(401).json({ message: 'QR code non valido o scaduto' });
+      return;
+    }
+    if (user.loginTokenExpiresAt && user.loginTokenExpiresAt < new Date()) {
       res.status(401).json({ message: 'QR code non valido o scaduto' });
       return;
     }
@@ -148,7 +152,8 @@ export const getQrToken = async (req: AuthRequest, res: Response, next: NextFunc
 export const regenerateQrToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const newToken = crypto.randomBytes(32).toString('hex');
-    await User.findByIdAndUpdate(req.user!._id, { loginToken: newToken });
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await User.findByIdAndUpdate(req.user!._id, { loginToken: newToken, loginTokenExpiresAt: expiresAt });
     res.json({ loginToken: newToken });
   } catch (err) {
     next(err);
