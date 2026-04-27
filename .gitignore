@@ -10,6 +10,8 @@ server/node_modules/
 # Build / cache
 mobile/.expo/
 mobile/dist/
+mobile/build-*.apk
+mobile/build-*.ipa
 server/dist/
 *.tsbuildinfo
 
