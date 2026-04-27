@@ -26,6 +26,13 @@ export default function ProductListScreen({ navigation }: Props) {
   const [categories, setCategories] = useState<string[]>([]);
   const [loadingFilters, setLoadingFilters] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRef = useRef(search);
+  const filterBrandRef = useRef(filterBrand);
+  const filterCategoryRef = useRef(filterCategory);
+
+  useEffect(() => { searchRef.current = search; }, [search]);
+  useEffect(() => { filterBrandRef.current = filterBrand; }, [filterBrand]);
+  useEffect(() => { filterCategoryRef.current = filterCategory; }, [filterCategory]);
 
   const activeFiltersCount = (filterBrand ? 1 : 0) + (filterCategory ? 1 : 0);
 
@@ -44,7 +51,11 @@ export default function ProductListScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      load(search.trim() || undefined, filterBrand ?? undefined, filterCategory ?? undefined);
+      load(
+        searchRef.current.trim() || undefined,
+        filterBrandRef.current ?? undefined,
+        filterCategoryRef.current ?? undefined,
+      );
     }, [load])
   );
 
