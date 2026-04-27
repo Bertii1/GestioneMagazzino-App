@@ -28,7 +28,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2563EB"
       },
-      "package": "com.tuaazienda.gestionemagazzino",
+      "package": "com.homecinemasolution.gestionemagazzino",
       "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "CAMERA",
