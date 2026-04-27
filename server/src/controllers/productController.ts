@@ -47,11 +47,13 @@ export const getCategories = async (_req: AuthRequest, res: Response, next: Next
 
 export const getProducts = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { warehouseId, shelfId, q } = req.query;
+    const { warehouseId, shelfId, q, brand, category } = req.query;
     const filter: Record<string, unknown> = {};
 
     if (warehouseId) filter.warehouseId = warehouseId;
     if (shelfId) filter.shelfId = shelfId;
+    if (brand) filter.brand = brand;
+    if (category) filter.category = category;
     if (q) {
       const qStr = (q as string).slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = { $regex: qStr, $options: 'i' };

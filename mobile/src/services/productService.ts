@@ -12,7 +12,7 @@ export const productService = {
     return data;
   },
 
-  async getAll(params?: { warehouseId?: string; shelfId?: string; q?: string }): Promise<Product[]> {
+  async getAll(params?: { warehouseId?: string; shelfId?: string; q?: string; brand?: string; category?: string }): Promise<Product[]> {
     const { data } = await api.get<Product[]>('/products', { params });
     return data;
   },
